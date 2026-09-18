@@ -1,0 +1,16 @@
+{
+  "name": "openapi-discriminated-union-poc",
+  "private": true,
+  "packageManager": "pnpm@11.27.0",
+  "scripts": {
+    "dev:api": "pnpm --filter @poc/api dev",
+    "dev:web": "pnpm --filter @poc/web dev",
+    "generate": "orval --config orval.config.ts",
+    "test": "pnpm --filter @poc/api test && pnpm --filter @poc/web test",
+    "check": "pnpm generate && pnpm --filter @poc/api check && pnpm --filter @poc/web check"
+  },
+  "devDependencies": {
+    "orval": "8.33.0",
+    "typescript": "5.9.3"
+  }
+}

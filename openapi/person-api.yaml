@@ -1,0 +1,90 @@
+openapi: 3.1.1
+info:
+  title: Person API
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+paths:
+  /people/{personId}:
+    put:
+      operationId: replacePerson
+      summary: Replace a person
+      parameters:
+        - name: personId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PersonUpdate'
+      responses:
+        '200':
+          description: The saved person
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonUpdate'
+        '400':
+          description: The request body does not match the marital-status rules
+components:
+  schemas:
+    PersonBase:
+      type: object
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+        lastName:
+          type: string
+          minLength: 1
+      required:
+        - firstName
+        - lastName
+    MarriedPerson:
+      type: object
+      properties:
+        maritalStatus:
+          const: married
+        spouseFirstName:
+          type: string
+          minLength: 1
+        spouseLastName:
+          type: string
+          minLength: 1
+      required:
+        - maritalStatus
+        - spouseFirstName
+        - spouseLastName
+    UnmarriedPerson:
+      type: object
+      properties:
+        maritalStatus:
+          enum:
+            - single
+            - divorced
+            - widowed
+      required:
+        - maritalStatus
+      not:
+        anyOf:
+          - required:
+              - spouseFirstName
+          - required:
+              - spouseLastName
+    PersonUpdate:
+      allOf:
+        - $ref: '#/components/schemas/PersonBase'
+        - oneOf:
+            - $ref: '#/components/schemas/MarriedPerson'
+            - $ref: '#/components/schemas/UnmarriedPerson'
+      discriminator:
+        propertyName: maritalStatus
+        mapping:
+          married: '#/components/schemas/MarriedPerson'
+          single: '#/components/schemas/UnmarriedPerson'
+          divorced: '#/components/schemas/UnmarriedPerson'
+          widowed: '#/components/schemas/UnmarriedPerson'

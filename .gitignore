@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# Build and test artifacts
+dist/
+coverage/
+.vite/
+*.tsbuildinfo
+
+# Local configuration and operating-system files
+.env
+.env.*
+!.env.example
+.DS_Store

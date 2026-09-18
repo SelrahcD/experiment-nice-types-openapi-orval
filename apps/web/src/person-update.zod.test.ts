@@ -1,0 +1,40 @@
+import { describe, expect, it } from 'vitest'
+import { PersonUpdate } from './api/generated/models/personUpdate.zod'
+
+describe('generated PersonUpdate Zod schema', () => {
+  it('rejects an empty spouse name for a married person', () => {
+    const result = PersonUpdate.safeParse({
+      firstName: 'Ada',
+      lastName: 'Lovelace',
+      maritalStatus: 'married',
+      spouseFirstName: '',
+      spouseLastName: 'King-Noel',
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it('accepts an unmarried person without spouse names', () => {
+    const result = PersonUpdate.safeParse({
+      firstName: 'Ada',
+      lastName: 'Lovelace',
+      maritalStatus: 'single',
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it('currently strips spouse names instead of rejecting them for an unmarried person', () => {
+    const result = PersonUpdate.safeParse({
+      firstName: 'Ada',
+      lastName: 'Lovelace',
+      maritalStatus: 'single',
+      spouseFirstName: 'William',
+    })
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data).not.toHaveProperty('spouseFirstName')
+    }
+  })
+})

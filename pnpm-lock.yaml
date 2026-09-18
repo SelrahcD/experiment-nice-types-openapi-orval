@@ -29,6 +29,9 @@ importers:
       fastify:
         specifier: 5.12.5
         version: 5.12.5
+      ts-pattern:
+        specifier: 5.9.0
+        version: 5.9.0
       yaml:
         specifier: 2.9.1
         version: 2.9.1

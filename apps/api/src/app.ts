@@ -5,14 +5,17 @@ import { Ajv2020 } from 'ajv/dist/2020.js'
 import Fastify from 'fastify'
 import swagger from '@fastify/swagger'
 import swaggerUi from '@fastify/swagger-ui'
+import { match } from 'ts-pattern'
 import { parse } from 'yaml'
+import { createInMemoryEmailGateway, sendSpouseInvitation } from './email.js'
+import type { EmailGateway } from './email.js'
 
 type PersonBase = {
   firstName: string
   lastName: string
 }
 
-type Person = PersonBase & (
+export type Person = PersonBase & (
   | {
       maritalStatus: 'married'
       spouseFirstName: string
@@ -35,7 +38,7 @@ const validator = new Ajv2020({ allErrors: true, strict: false }).compile({
   components: openApiDocument.components,
 })
 
-export const buildApp = () => {
+export const buildApp = (emailGateway: EmailGateway = createInMemoryEmailGateway()) => {
   const app = Fastify()
   const people = new Map<string, Person>([
     [
@@ -72,6 +75,18 @@ export const buildApp = () => {
 
       const person = request.body as Person
       people.set(request.params.personId, person)
+      match(person)
+        .with({ maritalStatus: 'married' }, (person) =>
+          sendSpouseInvitation(
+            {
+              firstName: person.spouseFirstName,
+              lastName: person.spouseLastName,
+              email: person.spouseEmail,
+            },
+            emailGateway,
+          ),
+        )
+        .otherwise(() => undefined)
       return reply.status(200).send(person)
     },
   )

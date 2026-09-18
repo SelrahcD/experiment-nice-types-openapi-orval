@@ -42,6 +42,10 @@ OpenAPI `not` constraint used to reject spouse fields for unmarried people:
 Zod strips those unknown fields, while the API still rejects them. The test
 suite records this deliberate comparison.
 
+The API uses an in-memory email gateway for this POC. Saving a `married`
+person maps the spouse data to an invitation email through `ts-pattern`; other
+marital statuses send no email.
+
 If the primary schema does not produce that property with the installed Orval
 version, add a separate `oneOf`-only comparison schema rather than weakening
 the primary POC silently.

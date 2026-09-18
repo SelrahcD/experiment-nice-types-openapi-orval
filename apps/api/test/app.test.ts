@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { buildApp } from '../src/app.js'
+import { createInMemoryEmailGateway } from '../src/email.js'
 
 let application = buildApp()
 
@@ -28,6 +29,45 @@ describe('PUT /people/:personId', () => {
 
     expect(response.statusCode).toBe(200)
     expect(response.json()).toMatchObject({ spouseFirstName: 'William' })
+  })
+
+  it('sends an invitation email when a married person is saved', async () => {
+    const emailGateway = createInMemoryEmailGateway()
+    application = buildApp(emailGateway)
+
+    await application.inject({
+      method: 'PUT',
+      url: '/people/ada',
+      payload: {
+        firstName: 'Ada',
+        lastName: 'Lovelace',
+        maritalStatus: 'married',
+        spouseFirstName: 'William',
+        spouseLastName: 'King-Noel',
+        spouseEmail: 'william@example.com',
+      },
+    })
+
+    expect(emailGateway.sentEmails).toEqual([
+      {
+        to: 'william@example.com',
+        subject: 'Welcome, William King-Noel',
+        text: 'You have been invited to the Person API POC.',
+      },
+    ])
+  })
+
+  it('does not send an invitation email for an unmarried person', async () => {
+    const emailGateway = createInMemoryEmailGateway()
+    application = buildApp(emailGateway)
+
+    await application.inject({
+      method: 'PUT',
+      url: '/people/ada',
+      payload: { firstName: 'Ada', lastName: 'Lovelace', maritalStatus: 'single' },
+    })
+
+    expect(emailGateway.sentEmails).toEqual([])
   })
 
   it('rejects a married person without spouse names', async () => {

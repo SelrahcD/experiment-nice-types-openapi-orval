@@ -31,9 +31,9 @@ file proves that TypeScript narrows a generated `PersonUpdate` to the married
 branch after checking `maritalStatus`.
 
 Orval also generates Zod 4 schemas in `apps/web/src/api/generated/models`.
-The React form calls `PersonUpdate.safeParse` before its HTTP request and shows
-the generated validation errors. `pnpm test` includes both API and generated
-Zod validation tests.
+TanStack Form uses `PersonUpdate` as its generated Zod submit validator, shows
+field errors, and parses the form value again before its HTTP request. `pnpm
+test` includes both API and generated Zod validation tests.
 
 The generated Zod schema validates the required spouse names for `married`.
 For this `allOf`-wrapped `oneOf`, it is generated as an intersection with a

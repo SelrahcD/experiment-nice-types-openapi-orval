@@ -17,6 +17,7 @@ type Person = PersonBase & (
       maritalStatus: 'married'
       spouseFirstName: string
       spouseLastName: string
+      spouseEmail: string
     }
   | {
       maritalStatus: 'single' | 'divorced' | 'widowed'
@@ -45,6 +46,7 @@ export const buildApp = () => {
         maritalStatus: 'married',
         spouseFirstName: 'William',
         spouseLastName: 'King-Noel',
+        spouseEmail: 'william@example.com',
       },
     ],
   ])

@@ -9,6 +9,7 @@ const initialPerson: PersonUpdate = {
   maritalStatus: 'married',
   spouseFirstName: 'William',
   spouseLastName: 'King-Noel',
+  spouseEmail: 'william@example.com',
 }
 
 export const usePersonForm = (setResult: (result: string) => void) =>

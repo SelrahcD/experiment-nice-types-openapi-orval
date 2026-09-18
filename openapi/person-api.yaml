@@ -55,10 +55,14 @@ components:
         spouseLastName:
           type: string
           minLength: 1
+        spouseEmail:
+          type: string
+          pattern: '^[^\s@]+@[^\s@]+\.[^\s@]+$'
       required:
         - maritalStatus
         - spouseFirstName
         - spouseLastName
+        - spouseEmail
     UnmarriedPerson:
       type: object
       properties:

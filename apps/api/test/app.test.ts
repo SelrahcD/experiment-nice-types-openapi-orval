@@ -22,6 +22,7 @@ describe('PUT /people/:personId', () => {
         maritalStatus: 'married',
         spouseFirstName: 'William',
         spouseLastName: 'King-Noel',
+        spouseEmail: 'william@example.com',
       },
     })
 
@@ -34,6 +35,23 @@ describe('PUT /people/:personId', () => {
       method: 'PUT',
       url: '/people/ada',
       payload: { firstName: 'Ada', lastName: 'Lovelace', maritalStatus: 'married' },
+    })
+
+    expect(response.statusCode).toBe(400)
+  })
+
+  it('rejects a married person with an invalid spouse email', async () => {
+    const response = await application.inject({
+      method: 'PUT',
+      url: '/people/ada',
+      payload: {
+        firstName: 'Ada',
+        lastName: 'Lovelace',
+        maritalStatus: 'married',
+        spouseFirstName: 'William',
+        spouseLastName: 'King-Noel',
+        spouseEmail: 'not-an-email',
+      },
     })
 
     expect(response.statusCode).toBe(400)

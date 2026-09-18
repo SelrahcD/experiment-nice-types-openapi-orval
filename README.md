@@ -22,7 +22,7 @@ Open the Vite URL, normally `http://localhost:5173`. The API is available on
 `openapi/person-api.yaml` is the only contract source. It describes a person
 as `PersonBase & (MarriedPerson | UnmarriedPerson)`:
 
-- `married` requires both spouse names;
+- `married` requires both spouse names and an email matching the OpenAPI regex;
 - `single`, `divorced`, and `widowed` reject either spouse-name property.
 
 `pnpm check` regenerates the Orval client, validates the API behavior with

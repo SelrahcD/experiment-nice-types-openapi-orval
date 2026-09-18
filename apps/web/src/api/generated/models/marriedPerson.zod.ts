@@ -8,11 +8,13 @@ import * as zod from 'zod';
 
 
 
+export const marriedPersonSpouseEmailRegExp = new RegExp('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
 
 export const MarriedPerson = zod.object({
   "maritalStatus": zod.enum(['married']),
   "spouseFirstName": zod.string().min(1),
-  "spouseLastName": zod.string().min(1)
+  "spouseLastName": zod.string().min(1),
+  "spouseEmail": zod.string().regex(marriedPersonSpouseEmailRegExp)
 })
 
 export type MarriedPerson = zod.input<typeof MarriedPerson>;

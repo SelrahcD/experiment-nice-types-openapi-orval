@@ -36,6 +36,20 @@ const SpouseFields = ({ form }: { form: PersonForm }) => (
         </label>
       )}
     </form.Field>
+    <form.Field name="spouseEmail">
+      {(field) => (
+        <label>
+          Spouse email
+          <input
+            type="email"
+            value={field.state.value}
+            onBlur={field.handleBlur}
+            onChange={(event) => field.handleChange(event.target.value)}
+          />
+          {field.state.meta.errors.length > 0 && <small>{formatErrors(field.state.meta.errors)}</small>}
+        </label>
+      )}
+    </form.Field>
   </>
 )
 
@@ -115,6 +129,7 @@ const App = () => {
           )}
         </form.Subscribe>
       </form>
+
       <output>{result}</output>
     </main>
   )

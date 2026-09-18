@@ -9,6 +9,7 @@ describe('generated PersonUpdate Zod schema', () => {
       maritalStatus: 'married',
       spouseFirstName: '',
       spouseLastName: 'King-Noel',
+      spouseEmail: 'william@example.com',
     })
 
     expect(result.success).toBe(false)
@@ -22,6 +23,19 @@ describe('generated PersonUpdate Zod schema', () => {
     })
 
     expect(result.success).toBe(true)
+  })
+
+  it('rejects an invalid spouse email for a married person', () => {
+    const result = PersonUpdate.safeParse({
+      firstName: 'Ada',
+      lastName: 'Lovelace',
+      maritalStatus: 'married',
+      spouseFirstName: 'William',
+      spouseLastName: 'King-Noel',
+      spouseEmail: 'not-an-email',
+    })
+
+    expect(result.success).toBe(false)
   })
 
   it('currently strips spouse names instead of rejecting them for an unmarried person', () => {

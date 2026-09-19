@@ -10,12 +10,12 @@ import { parse } from 'yaml'
 import { createInMemoryEmailGateway, sendSpouseInvitation } from './email.js'
 import type { EmailGateway } from './email.js'
 
-type PersonBase = {
+type Identity = {
   firstName: string
   lastName: string
 }
 
-export type Person = PersonBase & (
+type PersonalInformation = Identity & (
   | {
       maritalStatus: 'married'
       spouseFirstName: string
@@ -24,8 +24,21 @@ export type Person = PersonBase & (
     }
   | {
       maritalStatus: 'single' | 'divorced' | 'widowed'
-    }
+  }
 )
+
+type Address = {
+  addressFirstLine: string
+  addressSecondLine: string
+  postCode: string
+  city: string
+  country: string
+}
+
+export type Person = {
+  personalInformation: PersonalInformation
+  address: Address
+}
 
 const currentDirectory = dirname(fileURLToPath(import.meta.url))
 const openApiPath = resolve(currentDirectory, '../../../openapi/person-api.yaml')
@@ -44,12 +57,21 @@ export const buildApp = (emailGateway: EmailGateway = createInMemoryEmailGateway
     [
       'ada',
       {
-        firstName: 'Ada',
-        lastName: 'Lovelace',
-        maritalStatus: 'married',
-        spouseFirstName: 'William',
-        spouseLastName: 'King-Noel',
-        spouseEmail: 'william@example.com',
+        personalInformation: {
+          firstName: 'Ada',
+          lastName: 'Lovelace',
+          maritalStatus: 'married',
+          spouseFirstName: 'William',
+          spouseLastName: 'King-Noel',
+          spouseEmail: 'william@example.com',
+        },
+        address: {
+          addressFirstLine: '12 St James Square',
+          addressSecondLine: '',
+          postCode: 'SW1Y 4LB',
+          city: 'London',
+          country: 'GB',
+        },
       },
     ],
   ])
@@ -75,7 +97,7 @@ export const buildApp = (emailGateway: EmailGateway = createInMemoryEmailGateway
 
       const person = request.body as Person
       people.set(request.params.personId, person)
-      match(person)
+      match(person.personalInformation)
         .with({ maritalStatus: 'married' }, (person) =>
           sendSpouseInvitation(
             {

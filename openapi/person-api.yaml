@@ -32,7 +32,7 @@ paths:
           description: The request body does not match the marital-status rules
 components:
   schemas:
-    PersonBase:
+    Identity:
       type: object
       properties:
         firstName:
@@ -80,9 +80,9 @@ components:
               - spouseFirstName
           - required:
               - spouseLastName
-    PersonUpdate:
+    PersonalInformation:
       allOf:
-        - $ref: '#/components/schemas/PersonBase'
+        - $ref: '#/components/schemas/Identity'
         - oneOf:
             - $ref: '#/components/schemas/MarriedPerson'
             - $ref: '#/components/schemas/UnmarriedPerson'
@@ -93,3 +93,36 @@ components:
           single: '#/components/schemas/UnmarriedPerson'
           divorced: '#/components/schemas/UnmarriedPerson'
           widowed: '#/components/schemas/UnmarriedPerson'
+    Address:
+      type: object
+      properties:
+        addressFirstLine:
+          type: string
+          minLength: 1
+        addressSecondLine:
+          type: string
+        postCode:
+          type: string
+          minLength: 1
+        city:
+          type: string
+          minLength: 1
+        country:
+          type: string
+          minLength: 1
+      required:
+        - addressFirstLine
+        - addressSecondLine
+        - postCode
+        - city
+        - country
+    PersonUpdate:
+      type: object
+      properties:
+        personalInformation:
+          $ref: '#/components/schemas/PersonalInformation'
+        address:
+          $ref: '#/components/schemas/Address'
+      required:
+        - personalInformation
+        - address

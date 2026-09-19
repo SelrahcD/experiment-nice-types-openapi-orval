@@ -4,6 +4,35 @@ import { createInMemoryEmailGateway } from '../src/email.js'
 
 let application = buildApp()
 
+const address = {
+  addressFirstLine: '12 St James Square',
+  addressSecondLine: '',
+  postCode: 'SW1Y 4LB',
+  city: 'London',
+  country: 'GB',
+}
+
+const marriedPerson = {
+  personalInformation: {
+    firstName: 'Ada',
+    lastName: 'Lovelace',
+    maritalStatus: 'married',
+    spouseFirstName: 'William',
+    spouseLastName: 'King-Noel',
+    spouseEmail: 'william@example.com',
+  },
+  address,
+}
+
+const unmarriedPerson = {
+  personalInformation: {
+    firstName: 'Ada',
+    lastName: 'Lovelace',
+    maritalStatus: 'single',
+  },
+  address,
+}
+
 beforeEach(() => {
   application = buildApp()
 })
@@ -17,18 +46,14 @@ describe('PUT /people/:personId', () => {
     const response = await application.inject({
       method: 'PUT',
       url: '/people/ada',
-      payload: {
-        firstName: 'Ada',
-        lastName: 'Lovelace',
-        maritalStatus: 'married',
-        spouseFirstName: 'William',
-        spouseLastName: 'King-Noel',
-        spouseEmail: 'william@example.com',
-      },
+      payload: marriedPerson,
     })
 
     expect(response.statusCode).toBe(200)
-    expect(response.json()).toMatchObject({ spouseFirstName: 'William' })
+    expect(response.json()).toMatchObject({
+      personalInformation: { spouseFirstName: 'William' },
+      address,
+    })
   })
 
   it('sends an invitation email when a married person is saved', async () => {
@@ -38,14 +63,7 @@ describe('PUT /people/:personId', () => {
     await application.inject({
       method: 'PUT',
       url: '/people/ada',
-      payload: {
-        firstName: 'Ada',
-        lastName: 'Lovelace',
-        maritalStatus: 'married',
-        spouseFirstName: 'William',
-        spouseLastName: 'King-Noel',
-        spouseEmail: 'william@example.com',
-      },
+      payload: marriedPerson,
     })
 
     expect(emailGateway.sentEmails).toEqual([
@@ -64,7 +82,7 @@ describe('PUT /people/:personId', () => {
     await application.inject({
       method: 'PUT',
       url: '/people/ada',
-      payload: { firstName: 'Ada', lastName: 'Lovelace', maritalStatus: 'single' },
+      payload: unmarriedPerson,
     })
 
     expect(emailGateway.sentEmails).toEqual([])
@@ -74,7 +92,14 @@ describe('PUT /people/:personId', () => {
     const response = await application.inject({
       method: 'PUT',
       url: '/people/ada',
-      payload: { firstName: 'Ada', lastName: 'Lovelace', maritalStatus: 'married' },
+      payload: {
+        personalInformation: {
+          firstName: 'Ada',
+          lastName: 'Lovelace',
+          maritalStatus: 'married',
+        },
+        address,
+      },
     })
 
     expect(response.statusCode).toBe(400)
@@ -85,12 +110,8 @@ describe('PUT /people/:personId', () => {
       method: 'PUT',
       url: '/people/ada',
       payload: {
-        firstName: 'Ada',
-        lastName: 'Lovelace',
-        maritalStatus: 'married',
-        spouseFirstName: 'William',
-        spouseLastName: 'King-Noel',
-        spouseEmail: 'not-an-email',
+        personalInformation: { ...marriedPerson.personalInformation, spouseEmail: 'not-an-email' },
+        address,
       },
     })
 
@@ -101,11 +122,13 @@ describe('PUT /people/:personId', () => {
     const response = await application.inject({
       method: 'PUT',
       url: '/people/ada',
-      payload: { firstName: 'Ada', lastName: 'Lovelace', maritalStatus: 'single' },
+      payload: unmarriedPerson,
     })
 
     expect(response.statusCode).toBe(200)
-    expect(response.json()).toMatchObject({ maritalStatus: 'single' })
+    expect(response.json()).toMatchObject({
+      personalInformation: { maritalStatus: 'single' },
+    })
   })
 
   it('rejects spouse names for an unmarried person', async () => {
@@ -113,10 +136,8 @@ describe('PUT /people/:personId', () => {
       method: 'PUT',
       url: '/people/ada',
       payload: {
-        firstName: 'Ada',
-        lastName: 'Lovelace',
-        maritalStatus: 'single',
-        spouseFirstName: 'William',
+        personalInformation: { ...unmarriedPerson.personalInformation, spouseFirstName: 'William' },
+        address,
       },
     })
 

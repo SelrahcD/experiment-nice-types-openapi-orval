@@ -5,12 +5,21 @@ import type { PersonUpdate } from './api/generated/models/personUpdate.zod'
 import { validatePersonForm } from './person-form-validation'
 
 const initialPerson: PersonUpdate = {
-  firstName: 'Ada',
-  lastName: 'Lovelace',
-  maritalStatus: 'married',
-  spouseFirstName: 'William',
-  spouseLastName: 'King-Noel',
-  spouseEmail: 'william@example.com',
+  personalInformation: {
+    firstName: 'Ada',
+    lastName: 'Lovelace',
+    maritalStatus: 'married',
+    spouseFirstName: 'William',
+    spouseLastName: 'King-Noel',
+    spouseEmail: 'william@example.com',
+  },
+  address: {
+    addressFirstLine: '12 St James Square',
+    addressSecondLine: '',
+    postCode: 'SW1Y 4LB',
+    city: 'London',
+    country: 'GB',
+  },
 }
 
 export const usePersonForm = (setResult: (result: string) => void) =>
@@ -23,7 +32,7 @@ export const usePersonForm = (setResult: (result: string) => void) =>
       const person = PersonUpdateSchema.parse(value)
       const response = await replacePerson('ada', person)
       if (response.status === 200) {
-        setResult(`Saved ${response.data.maritalStatus} person.`)
+        setResult(`Saved ${response.data.personalInformation.maritalStatus} person.`)
         return
       }
 

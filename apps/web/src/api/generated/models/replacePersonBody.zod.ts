@@ -12,19 +12,32 @@ import * as zod from 'zod';
 
 
 
-export const replacePersonBodyTwoOneSpouseEmailRegExp = new RegExp('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+export const replacePersonBodyPersonalInformationTwoOneSpouseEmailRegExp = new RegExp('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+
+
+
+
 
 export const ReplacePersonBody = zod.object({
+  "personalInformation": zod.object({
   "firstName": zod.string().min(1),
   "lastName": zod.string().min(1)
 }).and(zod.union([zod.object({
   "maritalStatus": zod.enum(['married']),
   "spouseFirstName": zod.string().min(1),
   "spouseLastName": zod.string().min(1),
-  "spouseEmail": zod.string().min(1).regex(replacePersonBodyTwoOneSpouseEmailRegExp)
+  "spouseEmail": zod.string().min(1).regex(replacePersonBodyPersonalInformationTwoOneSpouseEmailRegExp)
 }),zod.object({
   "maritalStatus": zod.enum(['single', 'divorced', 'widowed'])
-})]))
+})])),
+  "address": zod.object({
+  "addressFirstLine": zod.string().min(1),
+  "addressSecondLine": zod.string(),
+  "postCode": zod.string().min(1),
+  "city": zod.string().min(1),
+  "country": zod.string().min(1)
+})
+})
 
 export type ReplacePersonBody = zod.input<typeof ReplacePersonBody>;
 export type ReplacePersonBodyOutput = zod.output<typeof ReplacePersonBody>;

@@ -12,19 +12,32 @@ import * as zod from 'zod';
 
 
 
-export const personUpdateTwoOneSpouseEmailRegExp = new RegExp('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+export const personUpdatePersonalInformationTwoOneSpouseEmailRegExp = new RegExp('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+
+
+
+
 
 export const PersonUpdate = zod.object({
+  "personalInformation": zod.object({
   "firstName": zod.string().min(1),
   "lastName": zod.string().min(1)
 }).and(zod.union([zod.object({
   "maritalStatus": zod.enum(['married']),
   "spouseFirstName": zod.string().min(1),
   "spouseLastName": zod.string().min(1),
-  "spouseEmail": zod.string().min(1).regex(personUpdateTwoOneSpouseEmailRegExp)
+  "spouseEmail": zod.string().min(1).regex(personUpdatePersonalInformationTwoOneSpouseEmailRegExp)
 }),zod.object({
   "maritalStatus": zod.enum(['single', 'divorced', 'widowed'])
-})]))
+})])),
+  "address": zod.object({
+  "addressFirstLine": zod.string().min(1),
+  "addressSecondLine": zod.string(),
+  "postCode": zod.string().min(1),
+  "city": zod.string().min(1),
+  "country": zod.string().min(1)
+})
+})
 
 export type PersonUpdate = zod.input<typeof PersonUpdate>;
 export type PersonUpdateOutput = zod.output<typeof PersonUpdate>;

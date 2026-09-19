@@ -9,10 +9,10 @@ import * as zod from 'zod';
 
 
 
-export const PersonBase = zod.object({
+export const Identity = zod.object({
   "firstName": zod.string().min(1),
   "lastName": zod.string().min(1)
 })
 
-export type PersonBase = zod.input<typeof PersonBase>;
-export type PersonBaseOutput = zod.output<typeof PersonBase>;
+export type Identity = zod.input<typeof Identity>;
+export type IdentityOutput = zod.output<typeof Identity>;

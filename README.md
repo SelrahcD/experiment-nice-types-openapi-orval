@@ -20,7 +20,8 @@ Open the Vite URL, normally `http://localhost:5173`. The API is available on
 ## What is being proved
 
 `openapi/person-api.yaml` is the only contract source. It describes a person
-as `PersonBase & (MarriedPerson | UnmarriedPerson)`:
+as two explicit sections: `personalInformation` and `address`. The personal
+information section is `Identity & (MarriedPerson | UnmarriedPerson)`:
 
 - `married` requires both spouse names and an email matching the OpenAPI regex;
 - `single`, `divorced`, and `widowed` reject either spouse-name property.
@@ -47,9 +48,9 @@ OpenAPI `not` constraint used to reject spouse fields for unmarried people:
 Zod strips those unknown fields, while the API still rejects them. The test
 suite records this deliberate comparison.
 
-The API uses an in-memory email gateway for this POC. Saving a `married`
-person maps the spouse data to an invitation email through `ts-pattern`; other
-marital statuses send no email.
+The API uses an in-memory email gateway for this POC. Saving a person whose
+`personalInformation.maritalStatus` is `married` maps the spouse data to an
+invitation email through `ts-pattern`; other marital statuses send no email.
 
 If the primary schema does not produce that property with the installed Orval
 version, add a separate `oneOf`-only comparison schema rather than weakening

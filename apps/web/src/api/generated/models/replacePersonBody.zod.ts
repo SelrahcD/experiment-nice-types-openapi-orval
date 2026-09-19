@@ -10,6 +10,8 @@ import * as zod from 'zod';
 
 
 
+
+
 export const replacePersonBodyTwoOneSpouseEmailRegExp = new RegExp('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
 
 export const ReplacePersonBody = zod.object({
@@ -19,7 +21,7 @@ export const ReplacePersonBody = zod.object({
   "maritalStatus": zod.enum(['married']),
   "spouseFirstName": zod.string().min(1),
   "spouseLastName": zod.string().min(1),
-  "spouseEmail": zod.string().regex(replacePersonBodyTwoOneSpouseEmailRegExp)
+  "spouseEmail": zod.string().min(1).regex(replacePersonBodyTwoOneSpouseEmailRegExp)
 }),zod.object({
   "maritalStatus": zod.enum(['single', 'divorced', 'widowed'])
 })]))

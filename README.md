@@ -35,6 +35,11 @@ TanStack Form uses `PersonUpdate` as its generated Zod submit validator, shows
 field errors, and parses the form value again before its HTTP request. `pnpm
 test` includes both API and generated Zod validation tests.
 
+`apps/web/src/person-form-validation.ts` translates generated Zod errors into
+human-readable form errors; OpenAPI remains the source of validation rules.
+For the spouse email, an empty value and an invalid format have distinct
+messages.
+
 The generated Zod schema validates the required spouse names for `married`.
 For this `allOf`-wrapped `oneOf`, it is generated as an intersection with a
 union rather than `z.discriminatedUnion`. Also, Orval does not translate the

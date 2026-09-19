@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { match } from 'ts-pattern'
+import './app.css'
 import type { PersonUpdate } from './api/generated/models/personUpdate.zod'
 import { formatErrors } from './form-errors'
 import { usePersonForm } from './person-form'
@@ -9,10 +10,11 @@ import type { PersonForm } from './person-form'
 const unmarriedStatuses = ['single', 'divorced', 'widowed'] as const
 
 const SpouseFields = ({ form }: { form: PersonForm }) => (
-  <>
+  <fieldset className="spouse-fields">
+    <legend>Spouse details</legend>
     <form.Field name="spouseFirstName">
       {(field) => (
-        <label>
+        <label className="field">
           Spouse first name
           <input
             value={field.state.value}
@@ -25,7 +27,7 @@ const SpouseFields = ({ form }: { form: PersonForm }) => (
     </form.Field>
     <form.Field name="spouseLastName">
       {(field) => (
-        <label>
+        <label className="field">
           Spouse last name
           <input
             value={field.state.value}
@@ -38,7 +40,7 @@ const SpouseFields = ({ form }: { form: PersonForm }) => (
     </form.Field>
     <form.Field name="spouseEmail">
       {(field) => (
-        <label>
+        <label className="field">
           Spouse email
           <input
             type="email"
@@ -50,7 +52,7 @@ const SpouseFields = ({ form }: { form: PersonForm }) => (
         </label>
       )}
     </form.Field>
-  </>
+  </fieldset>
 )
 
 const App = () => {
@@ -58,9 +60,12 @@ const App = () => {
   const form = usePersonForm(setResult)
 
   return (
-    <main>
-      <h1>OpenAPI discriminated union POC</h1>
+    <main className="page">
+      <section className="form-card">
+        <h1>OpenAPI discriminated union POC</h1>
+        <p className="form-introduction">Update a person and their marital details.</p>
       <form
+        className="person-form"
         onSubmit={(event) => {
           event.preventDefault()
           event.stopPropagation()
@@ -69,7 +74,7 @@ const App = () => {
       >
         <form.Field name="firstName">
           {(field) => (
-            <label>
+            <label className="field">
               First name
               <input
                 value={field.state.value}
@@ -82,7 +87,7 @@ const App = () => {
         </form.Field>
         <form.Field name="lastName">
           {(field) => (
-            <label>
+            <label className="field">
               Last name
               <input
                 value={field.state.value}
@@ -95,7 +100,7 @@ const App = () => {
         </form.Field>
         <form.Field name="maritalStatus">
           {(field) => (
-            <label>
+            <label className="field">
               Marital status
               <select
                 value={field.state.value}
@@ -123,14 +128,15 @@ const App = () => {
         </form.Subscribe>
         <form.Subscribe selector={(state) => state.isSubmitting}>
           {(isSubmitting) => (
-            <button type="submit" disabled={isSubmitting}>
+            <button className="submit-button" type="submit" disabled={isSubmitting}>
               Save
             </button>
           )}
         </form.Subscribe>
       </form>
 
-      <output>{result}</output>
+        <output className="form-result">{result}</output>
+      </section>
     </main>
   )
 }

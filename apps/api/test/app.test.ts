@@ -13,6 +13,7 @@ const address = {
 }
 
 const emergencyContacts = {
+  status: 'provided' as const,
   primaryEmergencyContact: {
     name: 'Charles Babbage',
     relationship: 'Friend',
@@ -145,6 +146,22 @@ describe('PUT /people/:personId', () => {
     })
   })
 
+  it('saves a person who declines to share emergency contacts', async () => {
+    const response = await application.inject({
+      method: 'PUT',
+      url: '/people/ada',
+      payload: {
+        ...unmarriedPerson,
+        emergencyContacts: { status: 'declined' },
+      },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toMatchObject({
+      emergencyContacts: { status: 'declined' },
+    })
+  })
+
   it('rejects spouse names for an unmarried person', async () => {
     const response = await application.inject({
       method: 'PUT',
@@ -166,6 +183,7 @@ describe('PUT /people/:personId', () => {
       payload: {
         ...unmarriedPerson,
         emergencyContacts: {
+          status: 'provided',
           alternativeEmergencyContacts: [],
         },
       },
@@ -181,6 +199,7 @@ describe('PUT /people/:personId', () => {
       payload: {
         ...unmarriedPerson,
         emergencyContacts: {
+          status: 'provided',
           primaryEmergencyContact: emergencyContacts.primaryEmergencyContact,
           alternativeEmergencyContacts: [
             { name: 'Mary Somerville', relationship: 'Friend', phoneNumber: '+442079460002', email: '' },
@@ -201,6 +220,7 @@ describe('PUT /people/:personId', () => {
       payload: {
         ...unmarriedPerson,
         emergencyContacts: {
+          status: 'provided',
           primaryEmergencyContact: {
             ...emergencyContacts.primaryEmergencyContact,
             email: 'not-an-email',
@@ -220,6 +240,7 @@ describe('PUT /people/:personId', () => {
       payload: {
         ...unmarriedPerson,
         emergencyContacts: {
+          status: 'provided',
           primaryEmergencyContact: emergencyContacts.primaryEmergencyContact,
           alternativeEmergencyContacts: [
             {

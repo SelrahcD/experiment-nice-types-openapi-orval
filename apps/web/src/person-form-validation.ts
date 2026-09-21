@@ -1,6 +1,6 @@
 import { PersonUpdate as PersonUpdateSchema } from './api/generated/models/personUpdate.zod'
-import type { PersonUpdate } from './api/generated/models/personUpdate.zod'
 import { EmergencyContacts } from './emergency-contacts-validation'
+import type { PersonFormValues } from './person-form-data'
 
 const messages: Record<string, string> = {
   'personalInformation.firstName.too_small': 'Enter a first name.',
@@ -44,7 +44,7 @@ const getEmergencyContactMessage = (fieldName: string, issueCode: string) => {
   return undefined
 }
 
-export const validatePersonForm = ({ value }: { value: PersonUpdate }) => {
+export const validatePersonForm = ({ value }: { value: PersonFormValues }) => {
   const validation = PersonUpdateSchema.safeParse(value)
   const emergencyContactsValidation = EmergencyContacts.safeParse(
     value.emergencyContacts,

@@ -19,11 +19,11 @@ export const personUpdatePersonalInformationTwoOneSpouseEmailRegExp = new RegExp
 
 
 
-export const personUpdateEmergencyContactsPrimaryEmergencyContactEmailRegExp = new RegExp('^$|^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+export const personUpdateEmergencyContactsTwoPrimaryEmergencyContactEmailRegExp = new RegExp('^$|^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
 
 
-export const personUpdateEmergencyContactsAlternativeEmergencyContactsItemEmailRegExp = new RegExp('^$|^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
-export const personUpdateEmergencyContactsAlternativeEmergencyContactsMax = 2;
+export const personUpdateEmergencyContactsTwoAlternativeEmergencyContactsItemEmailRegExp = new RegExp('^$|^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+export const personUpdateEmergencyContactsTwoAlternativeEmergencyContactsMax = 2;
 
 
 export const PersonUpdate = zod.object({
@@ -45,20 +45,23 @@ export const PersonUpdate = zod.object({
   "city": zod.string().min(1),
   "country": zod.string().min(1)
 }),
-  "emergencyContacts": zod.object({
+  "emergencyContacts": zod.discriminatedUnion('status', [zod.object({
+  "status": zod.enum(['declined'])
+}),zod.object({
+  "status": zod.enum(['provided']),
   "primaryEmergencyContact": zod.object({
   "name": zod.string().min(1),
   "relationship": zod.string(),
   "phoneNumber": zod.string().min(1),
-  "email": zod.string().regex(personUpdateEmergencyContactsPrimaryEmergencyContactEmailRegExp)
+  "email": zod.string().regex(personUpdateEmergencyContactsTwoPrimaryEmergencyContactEmailRegExp)
 }),
   "alternativeEmergencyContacts": zod.array(zod.object({
   "name": zod.string().min(1),
   "relationship": zod.string(),
   "phoneNumber": zod.string().min(1),
-  "email": zod.string().regex(personUpdateEmergencyContactsAlternativeEmergencyContactsItemEmailRegExp)
-})).max(personUpdateEmergencyContactsAlternativeEmergencyContactsMax)
-})
+  "email": zod.string().regex(personUpdateEmergencyContactsTwoAlternativeEmergencyContactsItemEmailRegExp)
+})).max(personUpdateEmergencyContactsTwoAlternativeEmergencyContactsMax)
+})])
 })
 
 export type PersonUpdate = zod.input<typeof PersonUpdate>;

@@ -6,6 +6,7 @@ import type { PersonUpdate } from './api/generated/models/personUpdate.zod'
 import { formatErrors } from './form-errors'
 import { usePersonForm } from './person-form'
 import type { PersonForm } from './person-form'
+import type { EmergencyContactForm } from './person-form-data'
 
 const unmarriedStatuses = ['single', 'divorced', 'widowed'] as const
 
@@ -55,7 +56,7 @@ const SpouseFields = ({ form }: { form: PersonForm }) => (
   </fieldset>
 )
 
-const createEmptyEmergencyContact = (): PersonUpdate['emergencyContacts']['primaryEmergencyContact'] => ({
+const createEmptyEmergencyContact = (): EmergencyContactForm => ({
   name: '',
   relationship: '',
   phoneNumber: '',
@@ -71,6 +72,27 @@ const EmergencyContactsFields = ({ form }: { form: PersonForm }) => (
     {(emergencyContacts) => (
       <fieldset>
         <legend>Emergency contacts</legend>
+        {emergencyContacts.status === 'declined' ? (
+          <label className="primary-toggle">
+            <input
+              type="checkbox"
+              checked
+              onChange={() => form.setFieldValue('emergencyContacts.status', 'provided')}
+            />
+            I prefer not to share emergency contacts
+          </label>
+        ) : (
+          <>
+            <label className="primary-toggle">
+              <input
+                type="checkbox"
+                checked={false}
+                onChange={() =>
+                  form.setFieldValue('emergencyContacts.status', 'declined')
+                }
+              />
+              I prefer not to share emergency contacts
+            </label>
         <EmergencyContactCard
           form={form}
           title="Primary emergency contact"
@@ -90,6 +112,7 @@ const EmergencyContactsFields = ({ form }: { form: PersonForm }) => (
             canRemove
             onMakePrimary={() =>
               form.setFieldValue('emergencyContacts', {
+                status: 'provided',
                 primaryEmergencyContact: contact,
                 alternativeEmergencyContacts: [
                   emergencyContacts.primaryEmergencyContact,
@@ -121,6 +144,8 @@ const EmergencyContactsFields = ({ form }: { form: PersonForm }) => (
         >
           Add emergency contact
         </button>
+          </>
+        )}
       </fieldset>
     )}
   </form.Subscribe>

@@ -19,11 +19,11 @@ export const replacePersonBodyPersonalInformationTwoOneSpouseEmailRegExp = new R
 
 
 
-export const replacePersonBodyEmergencyContactsPrimaryEmergencyContactEmailRegExp = new RegExp('^$|^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+export const replacePersonBodyEmergencyContactsTwoPrimaryEmergencyContactEmailRegExp = new RegExp('^$|^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
 
 
-export const replacePersonBodyEmergencyContactsAlternativeEmergencyContactsItemEmailRegExp = new RegExp('^$|^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
-export const replacePersonBodyEmergencyContactsAlternativeEmergencyContactsMax = 2;
+export const replacePersonBodyEmergencyContactsTwoAlternativeEmergencyContactsItemEmailRegExp = new RegExp('^$|^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+export const replacePersonBodyEmergencyContactsTwoAlternativeEmergencyContactsMax = 2;
 
 
 export const ReplacePersonBody = zod.object({
@@ -45,20 +45,23 @@ export const ReplacePersonBody = zod.object({
   "city": zod.string().min(1),
   "country": zod.string().min(1)
 }),
-  "emergencyContacts": zod.object({
+  "emergencyContacts": zod.discriminatedUnion('status', [zod.object({
+  "status": zod.enum(['declined'])
+}),zod.object({
+  "status": zod.enum(['provided']),
   "primaryEmergencyContact": zod.object({
   "name": zod.string().min(1),
   "relationship": zod.string(),
   "phoneNumber": zod.string().min(1),
-  "email": zod.string().regex(replacePersonBodyEmergencyContactsPrimaryEmergencyContactEmailRegExp)
+  "email": zod.string().regex(replacePersonBodyEmergencyContactsTwoPrimaryEmergencyContactEmailRegExp)
 }),
   "alternativeEmergencyContacts": zod.array(zod.object({
   "name": zod.string().min(1),
   "relationship": zod.string(),
   "phoneNumber": zod.string().min(1),
-  "email": zod.string().regex(replacePersonBodyEmergencyContactsAlternativeEmergencyContactsItemEmailRegExp)
-})).max(replacePersonBodyEmergencyContactsAlternativeEmergencyContactsMax)
-})
+  "email": zod.string().regex(replacePersonBodyEmergencyContactsTwoAlternativeEmergencyContactsItemEmailRegExp)
+})).max(replacePersonBodyEmergencyContactsTwoAlternativeEmergencyContactsMax)
+})])
 })
 
 export type ReplacePersonBody = zod.input<typeof ReplacePersonBody>;

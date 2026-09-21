@@ -2,6 +2,10 @@ import { EmergencyContacts as GeneratedEmergencyContacts } from './api/generated
 
 export const EmergencyContacts = GeneratedEmergencyContacts.superRefine(
   (emergencyContacts, context) => {
+    if (emergencyContacts.status === 'declined') {
+      return
+    }
+
     const phoneNumbers = new Map<string, Array<string | number>>()
     const contacts = [
       {

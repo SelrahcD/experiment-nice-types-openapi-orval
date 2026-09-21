@@ -135,9 +135,18 @@ components:
         - relationship
         - phoneNumber
         - email
-    EmergencyContacts:
+    EmergencyContactsDeclined:
       type: object
       properties:
+        status:
+          const: declined
+      required:
+        - status
+    EmergencyContactsProvided:
+      type: object
+      properties:
+        status:
+          const: provided
         primaryEmergencyContact:
           $ref: '#/components/schemas/EmergencyContact'
         alternativeEmergencyContacts:
@@ -146,8 +155,18 @@ components:
           items:
             $ref: '#/components/schemas/EmergencyContact'
       required:
+        - status
         - primaryEmergencyContact
         - alternativeEmergencyContacts
+    EmergencyContacts:
+      oneOf:
+        - $ref: '#/components/schemas/EmergencyContactsDeclined'
+        - $ref: '#/components/schemas/EmergencyContactsProvided'
+      discriminator:
+        propertyName: status
+        mapping:
+          declined: '#/components/schemas/EmergencyContactsDeclined'
+          provided: '#/components/schemas/EmergencyContactsProvided'
     PersonUpdate:
       type: object
       properties:

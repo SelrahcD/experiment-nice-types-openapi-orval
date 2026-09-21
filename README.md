@@ -26,6 +26,10 @@ information section is `Identity & (MarriedPerson | UnmarriedPerson)`:
 - `married` requires both spouse names and an email matching the OpenAPI regex;
 - `single`, `divorced`, and `widowed` reject either spouse-name property.
 
+The request also has an `emergencyContacts` section. It is a discriminated
+union: a person either provides one primary contact and up to two alternatives,
+or submits `{ status: 'declined' }` to decline sharing any contact.
+
 `pnpm check` regenerates the Orval client, validates the API behavior with
 Fastify injection tests, and type-checks `apps/web/src/type-proof.ts`. That
 file proves that TypeScript narrows a generated `PersonUpdate` to the married

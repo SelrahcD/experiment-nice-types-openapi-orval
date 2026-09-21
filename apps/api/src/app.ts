@@ -45,10 +45,13 @@ type EmergencyContact = {
 export type Person = {
   personalInformation: PersonalInformation
   address: Address
-  emergencyContacts: {
-    primaryEmergencyContact: EmergencyContact
-    alternativeEmergencyContacts: EmergencyContact[]
-  }
+  emergencyContacts:
+    | { status: 'declined' }
+    | {
+        status: 'provided'
+        primaryEmergencyContact: EmergencyContact
+        alternativeEmergencyContacts: EmergencyContact[]
+      }
 }
 
 const currentDirectory = dirname(fileURLToPath(import.meta.url))
@@ -63,6 +66,10 @@ const validator = new Ajv2020({ allErrors: true, strict: false }).compile({
 })
 
 const hasDistinctEmergencyPhoneNumbers = (person: Person): boolean => {
+  if (person.emergencyContacts.status === 'declined') {
+    return true
+  }
+
   const phoneNumbers = [
     person.emergencyContacts.primaryEmergencyContact,
     ...person.emergencyContacts.alternativeEmergencyContacts,
@@ -93,6 +100,7 @@ export const buildApp = (emailGateway: EmailGateway = createInMemoryEmailGateway
           country: 'GB',
         },
         emergencyContacts: {
+          status: 'provided',
           primaryEmergencyContact: {
             name: 'Charles Babbage',
             relationship: 'Friend',

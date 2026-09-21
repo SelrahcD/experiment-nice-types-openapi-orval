@@ -6,12 +6,19 @@ import { PersonUpdate } from './api/generated/models/personUpdate.zod'
 import { validatePersonForm } from './person-form-validation'
 
 const emergencyContacts = {
+  status: 'provided' as const,
   primaryEmergencyContact: {
     name: 'Charles Babbage',
     relationship: 'Friend',
     phoneNumber: '+442079460001',
     email: 'charles@example.com',
   },
+  alternativeEmergencyContacts: [],
+}
+
+const emergencyContactsForm = {
+  status: 'provided' as const,
+  primaryEmergencyContact: emergencyContacts.primaryEmergencyContact,
   alternativeEmergencyContacts: [],
 }
 
@@ -30,6 +37,7 @@ describe('generated PersonUpdate Zod schema', () => {
       country: 'GB',
     })
     const emergencyContacts = EmergencyContacts.parse({
+      status: 'provided',
       primaryEmergencyContact: {
         name: 'Charles Babbage',
         relationship: 'Friend',
@@ -41,7 +49,9 @@ describe('generated PersonUpdate Zod schema', () => {
 
     expect(personalInformation.maritalStatus).toBe('single')
     expect(address.city).toBe('London')
-    expect(emergencyContacts.primaryEmergencyContact.name).toBe('Charles Babbage')
+    if (emergencyContacts.status === 'provided') {
+      expect(emergencyContacts.primaryEmergencyContact.name).toBe('Charles Babbage')
+    }
   })
 
   it('rejects an empty spouse name for a married person', () => {
@@ -81,7 +91,7 @@ describe('generated PersonUpdate Zod schema', () => {
       value: {
         personalInformation: { firstName: 'Ada', lastName: 'Lovelace', maritalStatus: 'married', spouseFirstName: 'William', spouseLastName: 'King-Noel', spouseEmail: 'not-an-email' },
         address: { addressFirstLine: '12 St James Square', addressSecondLine: '', postCode: 'SW1Y 4LB', city: 'London', country: 'GB' },
-        emergencyContacts,
+        emergencyContacts: emergencyContactsForm,
       },
     })
 
@@ -95,7 +105,7 @@ describe('generated PersonUpdate Zod schema', () => {
       value: {
         personalInformation: { firstName: 'Ada', lastName: 'Lovelace', maritalStatus: 'married', spouseFirstName: 'William', spouseLastName: 'King-Noel', spouseEmail: '' },
         address: { addressFirstLine: '12 St James Square', addressSecondLine: '', postCode: 'SW1Y 4LB', city: 'London', country: 'GB' },
-        emergencyContacts,
+        emergencyContacts: emergencyContactsForm,
       },
     })
 
@@ -121,10 +131,44 @@ describe('generated PersonUpdate Zod schema', () => {
     const result = PersonUpdate.safeParse({
       personalInformation: { firstName: 'Ada', lastName: 'Lovelace', maritalStatus: 'single' },
       address: { addressFirstLine: '12 St James Square', addressSecondLine: '', postCode: 'SW1Y 4LB', city: 'London', country: 'GB' },
-      emergencyContacts: { alternativeEmergencyContacts: [] },
+      emergencyContacts: { status: 'provided', alternativeEmergencyContacts: [] },
     })
 
     expect(result.success).toBe(false)
+  })
+
+  it('accepts a person who declines to share emergency contacts', () => {
+    const result = PersonUpdate.safeParse({
+      personalInformation: { firstName: 'Ada', lastName: 'Lovelace', maritalStatus: 'single' },
+      address: { addressFirstLine: '12 St James Square', addressSecondLine: '', postCode: 'SW1Y 4LB', city: 'London', country: 'GB' },
+      emergencyContacts: { status: 'declined' },
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it('keeps declined emergency contacts in the form but omits them from the API payload', () => {
+    const formEmergencyContacts = {
+      status: 'declined' as const,
+      primaryEmergencyContact: emergencyContacts.primaryEmergencyContact,
+      alternativeEmergencyContacts: [
+        {
+          name: 'Mary Somerville',
+          relationship: 'Friend',
+          phoneNumber: '+442079460002',
+          email: '',
+        },
+      ],
+    }
+    const payload = PersonUpdate.parse({
+      personalInformation: { firstName: 'Ada', lastName: 'Lovelace', maritalStatus: 'single' },
+      address: { addressFirstLine: '12 St James Square', addressSecondLine: '', postCode: 'SW1Y 4LB', city: 'London', country: 'GB' },
+      emergencyContacts: formEmergencyContacts,
+    })
+
+    expect(payload.emergencyContacts).toEqual({ status: 'declined' })
+    expect(formEmergencyContacts.primaryEmergencyContact.name).toBe('Charles Babbage')
+    expect(formEmergencyContacts.alternativeEmergencyContacts).toHaveLength(1)
   })
 
   it('reports duplicate emergency contact phone numbers on both contacts', () => {
@@ -133,6 +177,7 @@ describe('generated PersonUpdate Zod schema', () => {
         personalInformation: { firstName: 'Ada', lastName: 'Lovelace', maritalStatus: 'single' },
         address: { addressFirstLine: '12 St James Square', addressSecondLine: '', postCode: 'SW1Y 4LB', city: 'London', country: 'GB' },
         emergencyContacts: {
+          status: 'provided',
           primaryEmergencyContact: emergencyContacts.primaryEmergencyContact,
           alternativeEmergencyContacts: [
             {

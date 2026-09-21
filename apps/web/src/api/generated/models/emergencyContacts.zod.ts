@@ -8,27 +8,30 @@ import * as zod from 'zod';
 
 
 
-export const emergencyContactsPrimaryEmergencyContactEmailRegExp = new RegExp('^$|^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+export const emergencyContactsTwoPrimaryEmergencyContactEmailRegExp = new RegExp('^$|^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
 
 
-export const emergencyContactsAlternativeEmergencyContactsItemEmailRegExp = new RegExp('^$|^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
-export const emergencyContactsAlternativeEmergencyContactsMax = 2;
+export const emergencyContactsTwoAlternativeEmergencyContactsItemEmailRegExp = new RegExp('^$|^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+export const emergencyContactsTwoAlternativeEmergencyContactsMax = 2;
 
 
-export const EmergencyContacts = zod.object({
+export const EmergencyContacts = zod.discriminatedUnion('status', [zod.object({
+  "status": zod.enum(['declined'])
+}),zod.object({
+  "status": zod.enum(['provided']),
   "primaryEmergencyContact": zod.object({
   "name": zod.string().min(1),
   "relationship": zod.string(),
   "phoneNumber": zod.string().min(1),
-  "email": zod.string().regex(emergencyContactsPrimaryEmergencyContactEmailRegExp)
+  "email": zod.string().regex(emergencyContactsTwoPrimaryEmergencyContactEmailRegExp)
 }),
   "alternativeEmergencyContacts": zod.array(zod.object({
   "name": zod.string().min(1),
   "relationship": zod.string(),
   "phoneNumber": zod.string().min(1),
-  "email": zod.string().regex(emergencyContactsAlternativeEmergencyContactsItemEmailRegExp)
-})).max(emergencyContactsAlternativeEmergencyContactsMax)
-})
+  "email": zod.string().regex(emergencyContactsTwoAlternativeEmergencyContactsItemEmailRegExp)
+})).max(emergencyContactsTwoAlternativeEmergencyContactsMax)
+})])
 
 export type EmergencyContacts = zod.input<typeof EmergencyContacts>;
 export type EmergencyContactsOutput = zod.output<typeof EmergencyContacts>;

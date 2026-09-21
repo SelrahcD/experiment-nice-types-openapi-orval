@@ -1,10 +1,10 @@
 import { useForm } from '@tanstack/react-form'
 import { replacePerson } from './api/generated/person-api'
 import { PersonUpdate as PersonUpdateSchema } from './api/generated/models/personUpdate.zod'
-import type { PersonUpdate } from './api/generated/models/personUpdate.zod'
+import type { PersonFormValues } from './person-form-data'
 import { validatePersonForm } from './person-form-validation'
 
-const initialPerson: PersonUpdate = {
+const initialPerson: PersonFormValues = {
   personalInformation: {
     firstName: 'Ada',
     lastName: 'Lovelace',
@@ -21,6 +21,7 @@ const initialPerson: PersonUpdate = {
     country: 'GB',
   },
   emergencyContacts: {
+    status: 'provided',
     primaryEmergencyContact: {
       name: 'Charles Babbage',
       relationship: 'Friend',
@@ -33,7 +34,7 @@ const initialPerson: PersonUpdate = {
 
 export const usePersonForm = (setResult: (result: string) => void) =>
   useForm({
-    defaultValues: initialPerson as PersonUpdate,
+    defaultValues: initialPerson,
     validators: {
       onSubmit: validatePersonForm,
     },

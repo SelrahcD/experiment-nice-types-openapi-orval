@@ -44,6 +44,17 @@ const getEmergencyContactMessage = (fieldName: string, issueCode: string) => {
   return undefined
 }
 
+const getFieldName = (path: ReadonlyArray<PropertyKey>) =>
+  path.reduce<string>(
+    (fieldName, segment) =>
+      typeof segment === 'number'
+        ? `${fieldName}[${segment}]`
+        : fieldName === ''
+          ? String(segment)
+          : `${fieldName}.${String(segment)}`,
+    '',
+  )
+
 export const validatePersonForm = ({ value }: { value: PersonFormValues }) => {
   const validation = PersonUpdateSchema.safeParse(value)
   const emergencyContactsValidation = EmergencyContacts.safeParse(
@@ -65,10 +76,12 @@ export const validatePersonForm = ({ value }: { value: PersonFormValues }) => {
   ]
 
   const fields = issues.reduce<Record<string, string>>((errors, issue) => {
-    const fieldName = issue.path.join('.')
+    const fieldName = getFieldName(issue.path)
     if (errors[fieldName] === undefined) {
       errors[fieldName] =
-        issue.code === 'custom' ? issue.message : getMessage(fieldName, issue.code)
+        issue.code === 'custom'
+          ? issue.message
+          : getMessage(fieldName, String(issue.code))
     }
     return errors
   }, {})

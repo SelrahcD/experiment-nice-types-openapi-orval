@@ -6,7 +6,7 @@ export const EmergencyContacts = GeneratedEmergencyContacts.superRefine(
       return
     }
 
-    const phoneNumbers = new Map<string, Array<string | number>>()
+    const phoneNumbers = new Map<string, Array<Array<string | number>>>()
     const contacts = [
       {
         contact: emergencyContacts.primaryEmergencyContact,
@@ -20,23 +20,21 @@ export const EmergencyContacts = GeneratedEmergencyContacts.superRefine(
 
     contacts.forEach(({ contact, path }) => {
       const phoneNumber = contact.phoneNumber.trim()
-      const existingPath = phoneNumbers.get(phoneNumber)
+      phoneNumbers.set(phoneNumber, [...(phoneNumbers.get(phoneNumber) ?? []), path])
+    })
 
-      if (existingPath !== undefined) {
-        context.addIssue({
-          code: 'custom',
-          message: 'Use a different phone number for each emergency contact.',
-          path: [...existingPath, 'phoneNumber'],
-        })
+    phoneNumbers.forEach((paths) => {
+      if (paths.length < 2) {
+        return
+      }
+
+      paths.forEach((path) => {
         context.addIssue({
           code: 'custom',
           message: 'Use a different phone number for each emergency contact.',
           path: [...path, 'phoneNumber'],
         })
-        return
-      }
-
-      phoneNumbers.set(phoneNumber, path)
+      })
     })
   },
 )

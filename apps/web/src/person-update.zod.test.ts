@@ -172,7 +172,7 @@ describe('generated PersonUpdate Zod schema', () => {
     expect(formEmergencyContacts.alternativeEmergencyContacts).toHaveLength(1)
   })
 
-  it('reports duplicate emergency contact phone numbers on both contacts', () => {
+  it('reports a duplicate phone number on every emergency contact sharing it', () => {
     const errors = validatePersonForm({
       value: {
         personalInformation: { firstName: 'Ada', lastName: 'Lovelace', maritalStatus: 'single' },
@@ -187,6 +187,12 @@ describe('generated PersonUpdate Zod schema', () => {
               phoneNumber: '+442079460001',
               email: '',
             },
+            {
+              name: 'George Boole',
+              relationship: 'Friend',
+              phoneNumber: '+442079460001',
+              email: '',
+            },
           ],
         },
       },
@@ -196,10 +202,43 @@ describe('generated PersonUpdate Zod schema', () => {
       fields: {
         'emergencyContacts.primaryEmergencyContact.phoneNumber':
           'Use a different phone number for each emergency contact.',
-        'emergencyContacts.alternativeEmergencyContacts.0.phoneNumber':
+        'emergencyContacts.alternativeEmergencyContacts[0].phoneNumber':
+          'Use a different phone number for each emergency contact.',
+        'emergencyContacts.alternativeEmergencyContacts[1].phoneNumber':
           'Use a different phone number for each emergency contact.',
       },
     })
+  })
+
+  it('displays a duplicate phone-number error on every emergency contact sharing it', async () => {
+    const form = new FormApi({
+      defaultValues: {
+        personalInformation: { firstName: 'Ada', lastName: 'Lovelace', maritalStatus: 'single' as const },
+        address: { addressFirstLine: '12 St James Square', addressSecondLine: '', postCode: 'SW1Y 4LB', city: 'London', country: 'GB' },
+        emergencyContacts: {
+          status: 'provided' as const,
+          primaryEmergencyContact: emergencyContacts.primaryEmergencyContact,
+          alternativeEmergencyContacts: [
+            { name: 'Mary Somerville', relationship: 'Friend', phoneNumber: '+442079460001', email: '' },
+            { name: 'George Boole', relationship: 'Friend', phoneNumber: '+442079460001', email: '' },
+          ],
+        },
+      },
+      validationLogic: revalidateLogic(),
+      validators: { onDynamic: validatePersonForm },
+    })
+
+    await form.handleSubmit()
+
+    expect(
+      form.getFieldMeta('emergencyContacts.primaryEmergencyContact.phoneNumber')?.errors,
+    ).toEqual(['Use a different phone number for each emergency contact.'])
+    expect(
+      form.getFieldMeta('emergencyContacts.alternativeEmergencyContacts[0].phoneNumber')?.errors,
+    ).toEqual(['Use a different phone number for each emergency contact.'])
+    expect(
+      form.getFieldMeta('emergencyContacts.alternativeEmergencyContacts[1].phoneNumber')?.errors,
+    ).toEqual(['Use a different phone number for each emergency contact.'])
   })
 
   it('clears duplicate phone-number errors when a contact is corrected after submit', async () => {

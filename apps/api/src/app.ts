@@ -35,9 +35,20 @@ type Address = {
   country: string
 }
 
+type EmergencyContact = {
+  name: string
+  relationship: string
+  phoneNumber: string
+  email: string
+}
+
 export type Person = {
   personalInformation: PersonalInformation
   address: Address
+  emergencyContacts: {
+    primaryEmergencyContact: EmergencyContact
+    alternativeEmergencyContacts: EmergencyContact[]
+  }
 }
 
 const currentDirectory = dirname(fileURLToPath(import.meta.url))
@@ -50,6 +61,15 @@ const validator = new Ajv2020({ allErrors: true, strict: false }).compile({
   $ref: '#/components/schemas/PersonUpdate',
   components: openApiDocument.components,
 })
+
+const hasDistinctEmergencyPhoneNumbers = (person: Person): boolean => {
+  const phoneNumbers = [
+    person.emergencyContacts.primaryEmergencyContact,
+    ...person.emergencyContacts.alternativeEmergencyContacts,
+  ].map(contact => contact.phoneNumber.trim())
+
+  return new Set(phoneNumbers).size === phoneNumbers.length
+}
 
 export const buildApp = (emailGateway: EmailGateway = createInMemoryEmailGateway()) => {
   const app = Fastify()
@@ -72,6 +92,15 @@ export const buildApp = (emailGateway: EmailGateway = createInMemoryEmailGateway
           city: 'London',
           country: 'GB',
         },
+        emergencyContacts: {
+          primaryEmergencyContact: {
+            name: 'Charles Babbage',
+            relationship: 'Friend',
+            phoneNumber: '+442079460001',
+            email: 'charles@example.com',
+          },
+          alternativeEmergencyContacts: [],
+        },
       },
     ],
   ])
@@ -91,7 +120,10 @@ export const buildApp = (emailGateway: EmailGateway = createInMemoryEmailGateway
   app.put<{ Params: { personId: string }; Body: unknown }>(
     '/people/:personId',
     async (request, reply) => {
-      if (!validator(request.body)) {
+      if (
+        !validator(request.body) ||
+        !hasDistinctEmergencyPhoneNumbers(request.body as Person)
+      ) {
         return reply.status(400).send({ errors: validator.errors })
       }
 

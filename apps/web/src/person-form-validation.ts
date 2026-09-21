@@ -1,5 +1,6 @@
 import { PersonUpdate as PersonUpdateSchema } from './api/generated/models/personUpdate.zod'
 import type { PersonUpdate } from './api/generated/models/personUpdate.zod'
+import { EmergencyContacts } from './emergency-contacts-validation'
 
 const messages: Record<string, string> = {
   'personalInformation.firstName.too_small': 'Enter a first name.',
@@ -12,19 +13,62 @@ const messages: Record<string, string> = {
   'address.postCode.too_small': 'Enter a postcode.',
   'address.city.too_small': 'Enter a city.',
   'address.country.too_small': 'Enter a country.',
+  'emergencyContacts.primaryEmergencyContact.invalid_type':
+    'Enter a primary emergency contact.',
+  'emergencyContacts.alternativeEmergencyContacts.too_big':
+    'You can add at most two alternative emergency contacts.',
 }
 
 const getMessage = (fieldName: string, issueCode: string) =>
-  messages[`${fieldName}.${issueCode}`] ?? 'This value is invalid.'
+  messages[`${fieldName}.${issueCode}`] ??
+  getEmergencyContactMessage(fieldName, issueCode) ??
+  'This value is invalid.'
+
+const getEmergencyContactMessage = (fieldName: string, issueCode: string) => {
+  if (!fieldName.startsWith('emergencyContacts.')) {
+    return undefined
+  }
+
+  if (fieldName.endsWith('.name') && issueCode === 'too_small') {
+    return 'Enter the contact name.'
+  }
+
+  if (fieldName.endsWith('.phoneNumber') && issueCode === 'too_small') {
+    return 'Enter the contact phone number.'
+  }
+
+  if (fieldName.endsWith('.email') && issueCode === 'invalid_format') {
+    return 'Enter a valid contact email address.'
+  }
+
+  return undefined
+}
 
 export const validatePersonForm = ({ value }: { value: PersonUpdate }) => {
   const validation = PersonUpdateSchema.safeParse(value)
-  if (validation.success) return undefined
+  const emergencyContactsValidation = EmergencyContacts.safeParse(
+    value.emergencyContacts,
+  )
 
-  const fields = validation.error.issues.reduce<Record<string, string>>((errors, issue) => {
+  if (validation.success && emergencyContactsValidation.success) {
+    return undefined
+  }
+
+  const issues = [
+    ...(validation.success ? [] : validation.error.issues),
+    ...(emergencyContactsValidation.success
+      ? []
+      : emergencyContactsValidation.error.issues.map(issue => ({
+          ...issue,
+          path: ['emergencyContacts', ...issue.path],
+        }))),
+  ]
+
+  const fields = issues.reduce<Record<string, string>>((errors, issue) => {
     const fieldName = issue.path.join('.')
     if (errors[fieldName] === undefined) {
-      errors[fieldName] = getMessage(fieldName, issue.code)
+      errors[fieldName] =
+        issue.code === 'custom' ? issue.message : getMessage(fieldName, issue.code)
     }
     return errors
   }, {})

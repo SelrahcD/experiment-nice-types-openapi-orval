@@ -12,6 +12,16 @@ const address = {
   country: 'GB',
 }
 
+const emergencyContacts = {
+  primaryEmergencyContact: {
+    name: 'Charles Babbage',
+    relationship: 'Friend',
+    phoneNumber: '+442079460001',
+    email: 'charles@example.com',
+  },
+  alternativeEmergencyContacts: [],
+}
+
 const marriedPerson = {
   personalInformation: {
     firstName: 'Ada',
@@ -22,6 +32,7 @@ const marriedPerson = {
     spouseEmail: 'william@example.com',
   },
   address,
+  emergencyContacts,
 }
 
 const unmarriedPerson = {
@@ -31,6 +42,7 @@ const unmarriedPerson = {
     maritalStatus: 'single',
   },
   address,
+  emergencyContacts,
 }
 
 beforeEach(() => {
@@ -99,6 +111,7 @@ describe('PUT /people/:personId', () => {
           maritalStatus: 'married',
         },
         address,
+        emergencyContacts,
       },
     })
 
@@ -112,6 +125,7 @@ describe('PUT /people/:personId', () => {
       payload: {
         personalInformation: { ...marriedPerson.personalInformation, spouseEmail: 'not-an-email' },
         address,
+        emergencyContacts,
       },
     })
 
@@ -138,6 +152,84 @@ describe('PUT /people/:personId', () => {
       payload: {
         personalInformation: { ...unmarriedPerson.personalInformation, spouseFirstName: 'William' },
         address,
+        emergencyContacts,
+      },
+    })
+
+    expect(response.statusCode).toBe(400)
+  })
+
+  it('rejects emergency contacts without a primary contact', async () => {
+    const response = await application.inject({
+      method: 'PUT',
+      url: '/people/ada',
+      payload: {
+        ...unmarriedPerson,
+        emergencyContacts: {
+          alternativeEmergencyContacts: [],
+        },
+      },
+    })
+
+    expect(response.statusCode).toBe(400)
+  })
+
+  it('rejects a fourth emergency contact', async () => {
+    const response = await application.inject({
+      method: 'PUT',
+      url: '/people/ada',
+      payload: {
+        ...unmarriedPerson,
+        emergencyContacts: {
+          primaryEmergencyContact: emergencyContacts.primaryEmergencyContact,
+          alternativeEmergencyContacts: [
+            { name: 'Mary Somerville', relationship: 'Friend', phoneNumber: '+442079460002', email: '' },
+            { name: 'George Boole', relationship: 'Friend', phoneNumber: '+442079460003', email: '' },
+            { name: 'Mary Anning', relationship: 'Friend', phoneNumber: '+442079460004', email: '' },
+          ],
+        },
+      },
+    })
+
+    expect(response.statusCode).toBe(400)
+  })
+
+  it('rejects an emergency contact with an invalid email address', async () => {
+    const response = await application.inject({
+      method: 'PUT',
+      url: '/people/ada',
+      payload: {
+        ...unmarriedPerson,
+        emergencyContacts: {
+          primaryEmergencyContact: {
+            ...emergencyContacts.primaryEmergencyContact,
+            email: 'not-an-email',
+          },
+          alternativeEmergencyContacts: [],
+        },
+      },
+    })
+
+    expect(response.statusCode).toBe(400)
+  })
+
+  it('rejects duplicate emergency contact phone numbers', async () => {
+    const response = await application.inject({
+      method: 'PUT',
+      url: '/people/ada',
+      payload: {
+        ...unmarriedPerson,
+        emergencyContacts: {
+          primaryEmergencyContact: emergencyContacts.primaryEmergencyContact,
+          alternativeEmergencyContacts: [
+            {
+              name: 'Mary Somerville',
+              relationship: 'Friend',
+              phoneNumber: '+442079460001',
+              email: '',
+            },
+          ],
+        },
       },
     })
 

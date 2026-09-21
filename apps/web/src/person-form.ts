@@ -20,6 +20,15 @@ const initialPerson: PersonUpdate = {
     city: 'London',
     country: 'GB',
   },
+  emergencyContacts: {
+    primaryEmergencyContact: {
+      name: 'Charles Babbage',
+      relationship: 'Friend',
+      phoneNumber: '+442079460001',
+      email: 'charles@example.com',
+    },
+    alternativeEmergencyContacts: [],
+  },
 }
 
 export const usePersonForm = (setResult: (result: string) => void) =>

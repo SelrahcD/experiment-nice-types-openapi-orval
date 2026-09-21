@@ -18,6 +18,14 @@ export const replacePersonBodyPersonalInformationTwoOneSpouseEmailRegExp = new R
 
 
 
+
+export const replacePersonBodyEmergencyContactsPrimaryEmergencyContactEmailRegExp = new RegExp('^$|^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+
+
+export const replacePersonBodyEmergencyContactsAlternativeEmergencyContactsItemEmailRegExp = new RegExp('^$|^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+export const replacePersonBodyEmergencyContactsAlternativeEmergencyContactsMax = 2;
+
+
 export const ReplacePersonBody = zod.object({
   "personalInformation": zod.object({
   "firstName": zod.string().min(1),
@@ -36,6 +44,20 @@ export const ReplacePersonBody = zod.object({
   "postCode": zod.string().min(1),
   "city": zod.string().min(1),
   "country": zod.string().min(1)
+}),
+  "emergencyContacts": zod.object({
+  "primaryEmergencyContact": zod.object({
+  "name": zod.string().min(1),
+  "relationship": zod.string(),
+  "phoneNumber": zod.string().min(1),
+  "email": zod.string().regex(replacePersonBodyEmergencyContactsPrimaryEmergencyContactEmailRegExp)
+}),
+  "alternativeEmergencyContacts": zod.array(zod.object({
+  "name": zod.string().min(1),
+  "relationship": zod.string(),
+  "phoneNumber": zod.string().min(1),
+  "email": zod.string().regex(replacePersonBodyEmergencyContactsAlternativeEmergencyContactsItemEmailRegExp)
+})).max(replacePersonBodyEmergencyContactsAlternativeEmergencyContactsMax)
 })
 })
 

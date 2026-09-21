@@ -116,6 +116,38 @@ components:
         - postCode
         - city
         - country
+    EmergencyContact:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        relationship:
+          type: string
+        phoneNumber:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          pattern: '^$|^[^\s@]+@[^\s@]+\.[^\s@]+$'
+      required:
+        - name
+        - relationship
+        - phoneNumber
+        - email
+    EmergencyContacts:
+      type: object
+      properties:
+        primaryEmergencyContact:
+          $ref: '#/components/schemas/EmergencyContact'
+        alternativeEmergencyContacts:
+          type: array
+          maxItems: 2
+          items:
+            $ref: '#/components/schemas/EmergencyContact'
+      required:
+        - primaryEmergencyContact
+        - alternativeEmergencyContacts
     PersonUpdate:
       type: object
       properties:
@@ -123,6 +155,9 @@ components:
           $ref: '#/components/schemas/PersonalInformation'
         address:
           $ref: '#/components/schemas/Address'
+        emergencyContacts:
+          $ref: '#/components/schemas/EmergencyContacts'
       required:
         - personalInformation
         - address
+        - emergencyContacts

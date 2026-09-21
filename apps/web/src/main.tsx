@@ -55,6 +55,139 @@ const SpouseFields = ({ form }: { form: PersonForm }) => (
   </fieldset>
 )
 
+const createEmptyEmergencyContact = (): PersonUpdate['emergencyContacts']['primaryEmergencyContact'] => ({
+  name: '',
+  relationship: '',
+  phoneNumber: '',
+  email: '',
+})
+
+type EmergencyContactPath =
+  | 'emergencyContacts.primaryEmergencyContact'
+  | `emergencyContacts.alternativeEmergencyContacts[${number}]`
+
+const EmergencyContactsFields = ({ form }: { form: PersonForm }) => (
+  <form.Subscribe selector={(state) => state.values.emergencyContacts}>
+    {(emergencyContacts) => (
+      <fieldset>
+        <legend>Emergency contacts</legend>
+        <EmergencyContactCard
+          form={form}
+          title="Primary emergency contact"
+          path="emergencyContacts.primaryEmergencyContact"
+          isPrimary
+          canRemove={false}
+          onMakePrimary={() => undefined}
+          onRemove={() => undefined}
+        />
+        {emergencyContacts.alternativeEmergencyContacts.map((contact, index) => (
+          <EmergencyContactCard
+            key={index}
+            form={form}
+            title={`Emergency contact ${index + 2}`}
+            path={`emergencyContacts.alternativeEmergencyContacts[${index}]`}
+            isPrimary={false}
+            canRemove
+            onMakePrimary={() =>
+              form.setFieldValue('emergencyContacts', {
+                primaryEmergencyContact: contact,
+                alternativeEmergencyContacts: [
+                  emergencyContacts.primaryEmergencyContact,
+                  ...emergencyContacts.alternativeEmergencyContacts.filter(
+                    (_, currentIndex) => currentIndex !== index,
+                  ),
+                ],
+              })
+            }
+            onRemove={() =>
+              form.setFieldValue('emergencyContacts.alternativeEmergencyContacts',
+                emergencyContacts.alternativeEmergencyContacts.filter(
+                  (_, currentIndex) => currentIndex !== index,
+                ),
+              )
+            }
+          />
+        ))}
+        <button
+          type="button"
+          className="add-contact-button"
+          disabled={emergencyContacts.alternativeEmergencyContacts.length === 2}
+          onClick={() =>
+            form.setFieldValue('emergencyContacts.alternativeEmergencyContacts', [
+              ...emergencyContacts.alternativeEmergencyContacts,
+              createEmptyEmergencyContact(),
+            ])
+          }
+        >
+          Add emergency contact
+        </button>
+      </fieldset>
+    )}
+  </form.Subscribe>
+)
+
+const EmergencyContactCard = ({
+  form,
+  title,
+  path,
+  isPrimary,
+  canRemove,
+  onMakePrimary,
+  onRemove,
+}: {
+  form: PersonForm
+  title: string
+  path: EmergencyContactPath
+  isPrimary: boolean
+  canRemove: boolean
+  onMakePrimary: () => void
+  onRemove: () => void
+}) => (
+  <fieldset className="spouse-fields">
+    <legend>{title}</legend>
+    <form.Field name={`${path}.name` as const}>
+      {(field) => (
+        <label className="field">
+          Name
+          <input value={field.state.value} onBlur={field.handleBlur} onChange={(event) => field.handleChange(event.target.value)} />
+          {field.state.meta.errors.length > 0 && <small>{formatErrors(field.state.meta.errors)}</small>}
+        </label>
+      )}
+    </form.Field>
+    <form.Field name={`${path}.relationship` as const}>
+      {(field) => (
+        <label className="field">
+          Relationship
+          <input value={field.state.value} onBlur={field.handleBlur} onChange={(event) => field.handleChange(event.target.value)} />
+        </label>
+      )}
+    </form.Field>
+    <form.Field name={`${path}.phoneNumber` as const}>
+      {(field) => (
+        <label className="field">
+          Phone number
+          <input type="tel" value={field.state.value} onBlur={field.handleBlur} onChange={(event) => field.handleChange(event.target.value)} />
+          {field.state.meta.errors.length > 0 && <small>{formatErrors(field.state.meta.errors)}</small>}
+        </label>
+      )}
+    </form.Field>
+    <form.Field name={`${path}.email` as const}>
+      {(field) => (
+        <label className="field">
+          Email
+          <input type="email" value={field.state.value} onBlur={field.handleBlur} onChange={(event) => field.handleChange(event.target.value)} />
+          {field.state.meta.errors.length > 0 && <small>{formatErrors(field.state.meta.errors)}</small>}
+        </label>
+      )}
+    </form.Field>
+    <label className="primary-toggle">
+      <input type="checkbox" checked={isPrimary} disabled={isPrimary} onChange={onMakePrimary} />
+      Set as primary emergency contact
+    </label>
+    {canRemove && <button type="button" className="remove-contact-button" onClick={onRemove}>Remove contact</button>}
+  </fieldset>
+)
+
 const App = () => {
   const [result, setResult] = useState('')
   const form = usePersonForm(setResult)
@@ -204,6 +337,7 @@ const App = () => {
             )}
           </form.Field>
         </fieldset>
+        <EmergencyContactsFields form={form} />
         <form.Subscribe selector={(state) => state.isSubmitting}>
           {(isSubmitting) => (
             <button className="submit-button" type="submit" disabled={isSubmitting}>

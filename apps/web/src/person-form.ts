@@ -4,35 +4,10 @@ import { PersonUpdate as PersonUpdateSchema } from './api/generated/models/perso
 import { toPersonUpdate, type PersonFormValues } from './person-form-data'
 import { validatePersonForm } from './person-form-validation'
 
-const initialPerson: PersonFormValues = {
-  personalInformation: {
-    firstName: 'Ada',
-    lastName: 'Lovelace',
-    maritalStatus: 'married',
-    spouseFirstName: 'William',
-    spouseLastName: 'King-Noel',
-    spouseEmail: 'william@example.com',
-  },
-  address: {
-    addressFirstLine: '12 St James Square',
-    addressSecondLine: '',
-    postCode: 'SW1Y 4LB',
-    city: 'London',
-    country: 'GB',
-  },
-  emergencyContacts: {
-    status: 'provided',
-    contacts: [{
-      name: 'Charles Babbage',
-      relationship: 'Friend',
-      phoneNumber: '+442079460001',
-      email: 'charles@example.com',
-      isPrimary: true,
-    }],
-  },
-}
-
-export const usePersonForm = (setResult: (result: string) => void) =>
+export const usePersonForm = (
+  initialPerson: PersonFormValues,
+  setResult: (result: string) => void,
+) =>
   useForm({
     defaultValues: initialPerson,
     validationLogic: revalidateLogic({

@@ -1,12 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { match } from 'ts-pattern'
 import './app.css'
 import type { PersonUpdate } from './api/generated/models/personUpdate.zod'
+import { getPerson } from './api/generated/person-api'
 import { formatErrors } from './form-errors'
 import { usePersonForm } from './person-form'
 import type { PersonForm } from './person-form'
-import type { EmergencyContactForm } from './person-form-data'
+import { fromPersonUpdate, type EmergencyContactForm, type PersonFormValues } from './person-form-data'
 
 const unmarriedStatuses = ['single', 'divorced', 'widowed'] as const
 
@@ -199,9 +200,9 @@ const EmergencyContactCard = ({
   </fieldset>
 )
 
-const App = () => {
+const PersonEditor = ({ person }: { person: PersonFormValues }) => {
   const [result, setResult] = useState('')
-  const form = usePersonForm(setResult)
+  const form = usePersonForm(person, setResult)
 
   return (
     <main className="page">
@@ -362,6 +363,32 @@ const App = () => {
       </section>
     </main>
   )
+}
+
+type PersonLoadState =
+  | { status: 'loading' }
+  | { status: 'loaded'; person: PersonFormValues }
+  | { status: 'error' }
+
+const App = () => {
+  const [personLoadState, setPersonLoadState] = useState<PersonLoadState>({ status: 'loading' })
+
+  useEffect(() => {
+    void getPerson('ada').then((response) => {
+      if (response.status === 200) {
+        setPersonLoadState({ status: 'loaded', person: fromPersonUpdate(response.data) })
+        return
+      }
+
+      setPersonLoadState({ status: 'error' })
+    })
+  }, [])
+
+  return match(personLoadState)
+    .with({ status: 'loading' }, () => <main className="page">Loading person…</main>)
+    .with({ status: 'loaded' }, ({ person }) => <PersonEditor person={person} />)
+    .with({ status: 'error' }, () => <main className="page">Unable to load person.</main>)
+    .exhaustive()
 }
 
 createRoot(document.getElementById('root')!).render(<App />)

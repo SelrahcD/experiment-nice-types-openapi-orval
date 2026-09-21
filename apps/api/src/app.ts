@@ -9,50 +9,11 @@ import { match } from 'ts-pattern'
 import { parse } from 'yaml'
 import { createInMemoryEmailGateway, sendSpouseInvitation } from './email.js'
 import type { EmailGateway } from './email.js'
+import { createInMemoryPeopleRepository } from './people-repository.js'
+import type { PeopleRepository } from './people-repository.js'
+import type { Person } from './person.js'
 
-type Identity = {
-  firstName: string
-  lastName: string
-}
-
-type PersonalInformation = Identity & (
-  | {
-      maritalStatus: 'married'
-      spouseFirstName: string
-      spouseLastName: string
-      spouseEmail: string
-    }
-  | {
-      maritalStatus: 'single' | 'divorced' | 'widowed'
-  }
-)
-
-type Address = {
-  addressFirstLine: string
-  addressSecondLine: string
-  postCode: string
-  city: string
-  country: string
-}
-
-type EmergencyContact = {
-  name: string
-  relationship: string
-  phoneNumber: string
-  email: string
-}
-
-export type Person = {
-  personalInformation: PersonalInformation
-  address: Address
-  emergencyContacts:
-    | { status: 'declined' }
-    | {
-        status: 'provided'
-        primaryEmergencyContact: EmergencyContact
-        alternativeEmergencyContacts: EmergencyContact[]
-      }
-}
+export type { Person } from './person.js'
 
 const currentDirectory = dirname(fileURLToPath(import.meta.url))
 const openApiPath = resolve(currentDirectory, '../../../openapi/person-api.yaml')
@@ -78,40 +39,11 @@ const hasDistinctEmergencyPhoneNumbers = (person: Person): boolean => {
   return new Set(phoneNumbers).size === phoneNumbers.length
 }
 
-export const buildApp = (emailGateway: EmailGateway = createInMemoryEmailGateway()) => {
+export const buildApp = (
+  emailGateway: EmailGateway = createInMemoryEmailGateway(),
+  peopleRepository: PeopleRepository = createInMemoryPeopleRepository(),
+) => {
   const app = Fastify()
-  const people = new Map<string, Person>([
-    [
-      'ada',
-      {
-        personalInformation: {
-          firstName: 'Ada',
-          lastName: 'Lovelace',
-          maritalStatus: 'married',
-          spouseFirstName: 'William',
-          spouseLastName: 'King-Noel',
-          spouseEmail: 'william@example.com',
-        },
-        address: {
-          addressFirstLine: '12 St James Square',
-          addressSecondLine: '',
-          postCode: 'SW1Y 4LB',
-          city: 'London',
-          country: 'GB',
-        },
-        emergencyContacts: {
-          status: 'provided',
-          primaryEmergencyContact: {
-            name: 'Charles Babbage',
-            relationship: 'Friend',
-            phoneNumber: '+442079460001',
-            email: 'charles@example.com',
-          },
-          alternativeEmergencyContacts: [],
-        },
-      },
-    ],
-  ])
 
   app.register(swagger, {
     mode: 'static',
@@ -125,6 +57,14 @@ export const buildApp = (emailGateway: EmailGateway = createInMemoryEmailGateway
 
   app.get('/openapi.json', () => openApiDocument)
 
+  app.get<{ Params: { personId: string } }>('/people/:personId', (request, reply) => {
+    if (!peopleRepository.has(request.params.personId)) {
+      return reply.status(404).send()
+    }
+
+    return reply.status(200).send(peopleRepository.get(request.params.personId))
+  })
+
   app.put<{ Params: { personId: string }; Body: unknown }>(
     '/people/:personId',
     async (request, reply) => {
@@ -136,7 +76,7 @@ export const buildApp = (emailGateway: EmailGateway = createInMemoryEmailGateway
       }
 
       const person = request.body as Person
-      people.set(request.params.personId, person)
+      peopleRepository.replace(request.params.personId, person)
       match(person.personalInformation)
         .with({ maritalStatus: 'married' }, (person) =>
           sendSpouseInvitation(
@@ -149,7 +89,7 @@ export const buildApp = (emailGateway: EmailGateway = createInMemoryEmailGateway
           ),
         )
         .otherwise(() => undefined)
-      return reply.status(200).send(person)
+      return reply.status(200).send(peopleRepository.get(request.params.personId))
     },
   )
 

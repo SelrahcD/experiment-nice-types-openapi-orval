@@ -4,7 +4,7 @@ import { Address } from './api/generated/models/address.zod'
 import { EmergencyContacts } from './api/generated/models/emergencyContacts.zod'
 import { PersonalInformation } from './api/generated/models/personalInformation.zod'
 import { PersonUpdate } from './api/generated/models/personUpdate.zod'
-import { toPersonUpdate } from './person-form-data'
+import { fromPersonUpdate, toPersonUpdate } from './person-form-data'
 import { validatePersonForm } from './person-form-validation'
 
 const emergencyContacts = {
@@ -197,6 +197,28 @@ describe('generated PersonUpdate Zod schema', () => {
       status: 'provided',
       primaryEmergencyContact: { name: 'Mary Somerville', relationship: 'Friend', phoneNumber: '+442079460002', email: '' },
       alternativeEmergencyContacts: [emergencyContacts.primaryEmergencyContact],
+    })
+  })
+
+  it('maps the stored primary contact back to the form primary contact', () => {
+    const formPerson = fromPersonUpdate({
+      personalInformation: { firstName: 'Ada', lastName: 'Lovelace', maritalStatus: 'single' },
+      address: { addressFirstLine: '12 St James Square', addressSecondLine: '', postCode: 'SW1Y 4LB', city: 'London', country: 'GB' },
+      emergencyContacts: {
+        status: 'provided',
+        primaryEmergencyContact: emergencyContacts.primaryEmergencyContact,
+        alternativeEmergencyContacts: [
+          { name: 'Mary Somerville', relationship: 'Friend', phoneNumber: '+442079460002', email: '' },
+        ],
+      },
+    })
+
+    expect(formPerson.emergencyContacts).toEqual({
+      status: 'provided',
+      contacts: [
+        { ...emergencyContacts.primaryEmergencyContact, isPrimary: true },
+        { name: 'Mary Somerville', relationship: 'Friend', phoneNumber: '+442079460002', email: '', isPrimary: false },
+      ],
     })
   })
 

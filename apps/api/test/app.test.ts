@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { buildApp } from '../src/app.js'
 import { createInMemoryEmailGateway } from '../src/email.js'
+import { createInMemoryPeopleRepository } from '../src/people-repository.js'
 
 let application = buildApp()
 
@@ -67,6 +68,46 @@ describe('PUT /people/:personId', () => {
       personalInformation: { spouseFirstName: 'William' },
       address,
     })
+  })
+
+  it('stores the replacement in the in-memory database', async () => {
+    const peopleRepository = createInMemoryPeopleRepository()
+    application = buildApp(createInMemoryEmailGateway(), peopleRepository)
+    const replacement = {
+      ...unmarriedPerson,
+      address: { ...address, city: 'Paris' },
+    }
+
+    await application.inject({
+      method: 'PUT',
+      url: '/people/ada',
+      payload: replacement,
+    })
+
+    expect(peopleRepository.get('ada')).toEqual(replacement)
+  })
+
+  it('returns the replacement through GET after a PUT', async () => {
+    const replacement = {
+      ...unmarriedPerson,
+      address: { ...address, city: 'Paris' },
+    }
+
+    await application.inject({
+      method: 'PUT',
+      url: '/people/ada',
+      payload: replacement,
+    })
+    const response = await application.inject({ method: 'GET', url: '/people/ada' })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual(replacement)
+  })
+
+  it('returns 404 when the person is not in the in-memory database', async () => {
+    const response = await application.inject({ method: 'GET', url: '/people/unknown' })
+
+    expect(response.statusCode).toBe(404)
   })
 
   it('sends an invitation email when a married person is saved', async () => {

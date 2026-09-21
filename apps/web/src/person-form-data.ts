@@ -16,6 +16,29 @@ export type PersonFormValues = Omit<PersonUpdate, 'emergencyContacts'> & {
 
 const withoutPrimaryMarker = ({ isPrimary: _, ...contact }: EmergencyContactForm) => contact
 
+export const fromPersonUpdate = (person: PersonUpdate): PersonFormValues => {
+  if (person.emergencyContacts.status === 'declined') {
+    return {
+      ...person,
+      emergencyContacts: { status: 'declined', contacts: [] },
+    }
+  }
+
+  return {
+    ...person,
+    emergencyContacts: {
+      status: 'provided',
+      contacts: [
+        { ...person.emergencyContacts.primaryEmergencyContact, isPrimary: true },
+        ...person.emergencyContacts.alternativeEmergencyContacts.map((contact) => ({
+          ...contact,
+          isPrimary: false,
+        })),
+      ],
+    },
+  }
+}
+
 export const toPersonUpdate = (person: PersonFormValues): PersonUpdate => {
   if (person.emergencyContacts.status === 'declined') {
     return {

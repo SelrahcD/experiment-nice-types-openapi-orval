@@ -9,6 +9,56 @@ import type {
 } from './models';
 
 
+export type getPersonResponse200 = {
+  data: PersonUpdate
+  status: 200
+}
+
+export type getPersonResponse404 = {
+  data: void
+  status: 404
+}
+
+export type getPersonResponseSuccess = (getPersonResponse200) & {
+  headers: Headers;
+};
+export type getPersonResponseError = (getPersonResponse404) & {
+  headers: Headers;
+};
+
+export type getPersonResponse = (getPersonResponseSuccess | getPersonResponseError)
+
+export const getGetPersonUrl = (personId: string,) => {
+
+
+
+
+  return `/people/${personId}`
+}
+
+/**
+ * @summary Get a person
+ */
+export const getPerson = async (personId: string, options?: RequestInit): Promise<getPersonResponse> => {
+
+  const res = await fetch(getGetPersonUrl(personId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: getPersonResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as getPersonResponse
+}
+
+
+
 export type replacePersonResponse200 = {
   data: PersonUpdate
   status: 200

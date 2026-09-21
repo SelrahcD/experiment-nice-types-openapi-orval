@@ -6,15 +6,27 @@ servers:
   - url: http://localhost:3000
 paths:
   /people/{personId}:
+    parameters:
+      - name: personId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: getPerson
+      summary: Get a person
+      responses:
+        '200':
+          description: The stored person
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonUpdate'
+        '404':
+          description: No person exists for this identifier
     put:
       operationId: replacePerson
       summary: Replace a person
-      parameters:
-        - name: personId
-          in: path
-          required: true
-          schema:
-            type: string
       requestBody:
         required: true
         content:

@@ -1,4 +1,4 @@
-import { useForm } from '@tanstack/react-form'
+import { revalidateLogic, useForm } from '@tanstack/react-form'
 import { replacePerson } from './api/generated/person-api'
 import { PersonUpdate as PersonUpdateSchema } from './api/generated/models/personUpdate.zod'
 import type { PersonFormValues } from './person-form-data'
@@ -35,8 +35,12 @@ const initialPerson: PersonFormValues = {
 export const usePersonForm = (setResult: (result: string) => void) =>
   useForm({
     defaultValues: initialPerson,
+    validationLogic: revalidateLogic({
+      mode: 'submit',
+      modeAfterSubmission: 'change',
+    }),
     validators: {
-      onSubmit: validatePersonForm,
+      onDynamic: validatePersonForm,
     },
     onSubmit: async ({ value }) => {
       const person = PersonUpdateSchema.parse(value)

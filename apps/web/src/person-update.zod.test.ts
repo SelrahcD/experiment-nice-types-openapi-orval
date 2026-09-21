@@ -1,3 +1,4 @@
+import { FormApi, revalidateLogic } from '@tanstack/react-form'
 import { describe, expect, it } from 'vitest'
 import { Address } from './api/generated/models/address.zod'
 import { EmergencyContacts } from './api/generated/models/emergencyContacts.zod'
@@ -199,5 +200,44 @@ describe('generated PersonUpdate Zod schema', () => {
           'Use a different phone number for each emergency contact.',
       },
     })
+  })
+
+  it('clears duplicate phone-number errors when a contact is corrected after submit', async () => {
+    const form = new FormApi({
+      defaultValues: {
+        personalInformation: { firstName: 'Ada', lastName: 'Lovelace', maritalStatus: 'single' as const },
+        address: { addressFirstLine: '12 St James Square', addressSecondLine: '', postCode: 'SW1Y 4LB', city: 'London', country: 'GB' },
+        emergencyContacts: {
+          status: 'provided' as const,
+          primaryEmergencyContact: emergencyContacts.primaryEmergencyContact,
+          alternativeEmergencyContacts: [
+            { name: 'Mary Somerville', relationship: 'Friend', phoneNumber: '+442079460001', email: '' },
+          ],
+        },
+      },
+      validationLogic: revalidateLogic({
+        mode: 'submit',
+        modeAfterSubmission: 'change',
+      }),
+      validators: { onDynamic: validatePersonForm },
+    })
+
+    await form.handleSubmit()
+
+    expect(
+      form.getFieldMeta('emergencyContacts.primaryEmergencyContact.phoneNumber')?.errors,
+    ).toEqual(['Use a different phone number for each emergency contact.'])
+
+    form.setFieldValue(
+      'emergencyContacts.alternativeEmergencyContacts[0].phoneNumber',
+      '+442079460002',
+    )
+
+    expect(
+      form.getFieldMeta('emergencyContacts.primaryEmergencyContact.phoneNumber')?.errors,
+    ).toEqual([])
+    expect(
+      form.getFieldMeta('emergencyContacts.alternativeEmergencyContacts[0].phoneNumber')?.errors,
+    ).toEqual([])
   })
 })

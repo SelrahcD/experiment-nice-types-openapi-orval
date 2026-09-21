@@ -1,6 +1,6 @@
 import { PersonUpdate as PersonUpdateSchema } from './api/generated/models/personUpdate.zod'
 import { EmergencyContacts } from './emergency-contacts-validation'
-import type { PersonFormValues } from './person-form-data'
+import { toPersonUpdate, type PersonFormValues } from './person-form-data'
 
 const messages: Record<string, string> = {
   'personalInformation.firstName.too_small': 'Enter a first name.',
@@ -13,10 +13,7 @@ const messages: Record<string, string> = {
   'address.postCode.too_small': 'Enter a postcode.',
   'address.city.too_small': 'Enter a city.',
   'address.country.too_small': 'Enter a country.',
-  'emergencyContacts.primaryEmergencyContact.invalid_type':
-    'Enter a primary emergency contact.',
-  'emergencyContacts.alternativeEmergencyContacts.too_big':
-    'You can add at most two alternative emergency contacts.',
+  'emergencyContacts.contacts.too_big': 'You can add at most three emergency contacts.',
 }
 
 const getMessage = (fieldName: string, issueCode: string) =>
@@ -55,10 +52,50 @@ const getFieldName = (path: ReadonlyArray<PropertyKey>) =>
     '',
   )
 
+const getFormPath = (
+  path: ReadonlyArray<PropertyKey>,
+  value: PersonFormValues,
+): ReadonlyArray<PropertyKey> => {
+  if (path[0] !== 'emergencyContacts' || value.emergencyContacts.status === 'declined') {
+    return path
+  }
+
+  const contactKind = path[1]
+  const contacts = value.emergencyContacts.contacts
+  const primaryIndex = contacts.findIndex((contact) => contact.isPrimary)
+
+  if (contactKind === 'primaryEmergencyContact' && primaryIndex >= 0) {
+    return ['emergencyContacts', 'contacts', primaryIndex, ...path.slice(2)]
+  }
+
+  const alternativeIndex = path[2]
+  if (contactKind === 'alternativeEmergencyContacts' && typeof alternativeIndex === 'number') {
+    const alternativeContact = contacts.filter((contact) => !contact.isPrimary)[alternativeIndex]
+    const alternativeContactIndex = contacts.indexOf(alternativeContact)
+    if (alternativeContactIndex >= 0) {
+      return ['emergencyContacts', 'contacts', alternativeContactIndex, ...path.slice(3)]
+    }
+  }
+
+  return path
+}
+
 export const validatePersonForm = ({ value }: { value: PersonFormValues }) => {
-  const validation = PersonUpdateSchema.safeParse(value)
+  if (
+    value.emergencyContacts.status === 'provided' &&
+    !value.emergencyContacts.contacts.some((contact) => contact.isPrimary)
+  ) {
+    return {
+      fields: {
+        'emergencyContacts.contacts': 'Select a primary emergency contact.',
+      },
+    }
+  }
+
+  const person = toPersonUpdate(value)
+  const validation = PersonUpdateSchema.safeParse(person)
   const emergencyContactsValidation = EmergencyContacts.safeParse(
-    value.emergencyContacts,
+    person.emergencyContacts,
   )
 
   if (validation.success && emergencyContactsValidation.success) {
@@ -76,7 +113,7 @@ export const validatePersonForm = ({ value }: { value: PersonFormValues }) => {
   ]
 
   const fields = issues.reduce<Record<string, string>>((errors, issue) => {
-    const fieldName = getFieldName(issue.path)
+    const fieldName = getFieldName(getFormPath(issue.path, value))
     if (errors[fieldName] === undefined) {
       errors[fieldName] =
         issue.code === 'custom'

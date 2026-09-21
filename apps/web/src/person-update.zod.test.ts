@@ -4,6 +4,7 @@ import { Address } from './api/generated/models/address.zod'
 import { EmergencyContacts } from './api/generated/models/emergencyContacts.zod'
 import { PersonalInformation } from './api/generated/models/personalInformation.zod'
 import { PersonUpdate } from './api/generated/models/personUpdate.zod'
+import { toPersonUpdate } from './person-form-data'
 import { validatePersonForm } from './person-form-validation'
 
 const emergencyContacts = {
@@ -19,8 +20,7 @@ const emergencyContacts = {
 
 const emergencyContactsForm = {
   status: 'provided' as const,
-  primaryEmergencyContact: emergencyContacts.primaryEmergencyContact,
-  alternativeEmergencyContacts: [],
+  contacts: [{ ...emergencyContacts.primaryEmergencyContact, isPrimary: true }],
 }
 
 describe('generated PersonUpdate Zod schema', () => {
@@ -151,25 +151,53 @@ describe('generated PersonUpdate Zod schema', () => {
   it('keeps declined emergency contacts in the form but omits them from the API payload', () => {
     const formEmergencyContacts = {
       status: 'declined' as const,
-      primaryEmergencyContact: emergencyContacts.primaryEmergencyContact,
-      alternativeEmergencyContacts: [
+      contacts: [
+        {
+          ...emergencyContacts.primaryEmergencyContact,
+          isPrimary: true,
+        },
         {
           name: 'Mary Somerville',
           relationship: 'Friend',
           phoneNumber: '+442079460002',
           email: '',
+          isPrimary: false,
         },
       ],
     }
-    const payload = PersonUpdate.parse({
+    const payload = toPersonUpdate({
       personalInformation: { firstName: 'Ada', lastName: 'Lovelace', maritalStatus: 'single' },
       address: { addressFirstLine: '12 St James Square', addressSecondLine: '', postCode: 'SW1Y 4LB', city: 'London', country: 'GB' },
       emergencyContacts: formEmergencyContacts,
     })
 
     expect(payload.emergencyContacts).toEqual({ status: 'declined' })
-    expect(formEmergencyContacts.primaryEmergencyContact.name).toBe('Charles Babbage')
-    expect(formEmergencyContacts.alternativeEmergencyContacts).toHaveLength(1)
+    expect(formEmergencyContacts.contacts[0].name).toBe('Charles Babbage')
+    expect(formEmergencyContacts.contacts).toHaveLength(2)
+  })
+
+  it('keeps contact order in the form and promotes the selected contact only in the API payload', () => {
+    const formEmergencyContacts = {
+      status: 'provided' as const,
+      contacts: [
+        { ...emergencyContacts.primaryEmergencyContact, isPrimary: false },
+        { name: 'Mary Somerville', relationship: 'Friend', phoneNumber: '+442079460002', email: '', isPrimary: true },
+      ],
+    }
+
+    const payload = toPersonUpdate({
+      personalInformation: { firstName: 'Ada', lastName: 'Lovelace', maritalStatus: 'single' },
+      address: { addressFirstLine: '12 St James Square', addressSecondLine: '', postCode: 'SW1Y 4LB', city: 'London', country: 'GB' },
+      emergencyContacts: formEmergencyContacts,
+    })
+
+    expect(formEmergencyContacts.contacts[0].name).toBe('Charles Babbage')
+    expect(formEmergencyContacts.contacts[1].name).toBe('Mary Somerville')
+    expect(payload.emergencyContacts).toEqual({
+      status: 'provided',
+      primaryEmergencyContact: { name: 'Mary Somerville', relationship: 'Friend', phoneNumber: '+442079460002', email: '' },
+      alternativeEmergencyContacts: [emergencyContacts.primaryEmergencyContact],
+    })
   })
 
   it('reports a duplicate phone number on every emergency contact sharing it', () => {
@@ -179,19 +207,21 @@ describe('generated PersonUpdate Zod schema', () => {
         address: { addressFirstLine: '12 St James Square', addressSecondLine: '', postCode: 'SW1Y 4LB', city: 'London', country: 'GB' },
         emergencyContacts: {
           status: 'provided',
-          primaryEmergencyContact: emergencyContacts.primaryEmergencyContact,
-          alternativeEmergencyContacts: [
+          contacts: [
+            { ...emergencyContacts.primaryEmergencyContact, isPrimary: true },
             {
               name: 'Mary Somerville',
               relationship: 'Friend',
               phoneNumber: '+442079460001',
               email: '',
+              isPrimary: false,
             },
             {
               name: 'George Boole',
               relationship: 'Friend',
               phoneNumber: '+442079460001',
               email: '',
+              isPrimary: false,
             },
           ],
         },
@@ -200,11 +230,11 @@ describe('generated PersonUpdate Zod schema', () => {
 
     expect(errors).toEqual({
       fields: {
-        'emergencyContacts.primaryEmergencyContact.phoneNumber':
+        'emergencyContacts.contacts[0].phoneNumber':
           'Use a different phone number for each emergency contact.',
-        'emergencyContacts.alternativeEmergencyContacts[0].phoneNumber':
+        'emergencyContacts.contacts[1].phoneNumber':
           'Use a different phone number for each emergency contact.',
-        'emergencyContacts.alternativeEmergencyContacts[1].phoneNumber':
+        'emergencyContacts.contacts[2].phoneNumber':
           'Use a different phone number for each emergency contact.',
       },
     })
@@ -217,10 +247,10 @@ describe('generated PersonUpdate Zod schema', () => {
         address: { addressFirstLine: '12 St James Square', addressSecondLine: '', postCode: 'SW1Y 4LB', city: 'London', country: 'GB' },
         emergencyContacts: {
           status: 'provided' as const,
-          primaryEmergencyContact: emergencyContacts.primaryEmergencyContact,
-          alternativeEmergencyContacts: [
-            { name: 'Mary Somerville', relationship: 'Friend', phoneNumber: '+442079460001', email: '' },
-            { name: 'George Boole', relationship: 'Friend', phoneNumber: '+442079460001', email: '' },
+          contacts: [
+            { ...emergencyContacts.primaryEmergencyContact, isPrimary: true },
+            { name: 'Mary Somerville', relationship: 'Friend', phoneNumber: '+442079460001', email: '', isPrimary: false },
+            { name: 'George Boole', relationship: 'Friend', phoneNumber: '+442079460001', email: '', isPrimary: false },
           ],
         },
       },
@@ -231,13 +261,13 @@ describe('generated PersonUpdate Zod schema', () => {
     await form.handleSubmit()
 
     expect(
-      form.getFieldMeta('emergencyContacts.primaryEmergencyContact.phoneNumber')?.errors,
+      form.getFieldMeta('emergencyContacts.contacts[0].phoneNumber')?.errors,
     ).toEqual(['Use a different phone number for each emergency contact.'])
     expect(
-      form.getFieldMeta('emergencyContacts.alternativeEmergencyContacts[0].phoneNumber')?.errors,
+      form.getFieldMeta('emergencyContacts.contacts[1].phoneNumber')?.errors,
     ).toEqual(['Use a different phone number for each emergency contact.'])
     expect(
-      form.getFieldMeta('emergencyContacts.alternativeEmergencyContacts[1].phoneNumber')?.errors,
+      form.getFieldMeta('emergencyContacts.contacts[2].phoneNumber')?.errors,
     ).toEqual(['Use a different phone number for each emergency contact.'])
   })
 
@@ -248,9 +278,9 @@ describe('generated PersonUpdate Zod schema', () => {
         address: { addressFirstLine: '12 St James Square', addressSecondLine: '', postCode: 'SW1Y 4LB', city: 'London', country: 'GB' },
         emergencyContacts: {
           status: 'provided' as const,
-          primaryEmergencyContact: emergencyContacts.primaryEmergencyContact,
-          alternativeEmergencyContacts: [
-            { name: 'Mary Somerville', relationship: 'Friend', phoneNumber: '+442079460001', email: '' },
+          contacts: [
+            { ...emergencyContacts.primaryEmergencyContact, isPrimary: true },
+            { name: 'Mary Somerville', relationship: 'Friend', phoneNumber: '+442079460001', email: '', isPrimary: false },
           ],
         },
       },
@@ -264,19 +294,19 @@ describe('generated PersonUpdate Zod schema', () => {
     await form.handleSubmit()
 
     expect(
-      form.getFieldMeta('emergencyContacts.primaryEmergencyContact.phoneNumber')?.errors,
+      form.getFieldMeta('emergencyContacts.contacts[0].phoneNumber')?.errors,
     ).toEqual(['Use a different phone number for each emergency contact.'])
 
     form.setFieldValue(
-      'emergencyContacts.alternativeEmergencyContacts[0].phoneNumber',
+      'emergencyContacts.contacts[1].phoneNumber',
       '+442079460002',
     )
 
     expect(
-      form.getFieldMeta('emergencyContacts.primaryEmergencyContact.phoneNumber')?.errors,
+      form.getFieldMeta('emergencyContacts.contacts[0].phoneNumber')?.errors,
     ).toEqual([])
     expect(
-      form.getFieldMeta('emergencyContacts.alternativeEmergencyContacts[0].phoneNumber')?.errors,
+      form.getFieldMeta('emergencyContacts.contacts[1].phoneNumber')?.errors,
     ).toEqual([])
   })
 })

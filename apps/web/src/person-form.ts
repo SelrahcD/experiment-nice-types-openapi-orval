@@ -1,7 +1,7 @@
 import { revalidateLogic, useForm } from '@tanstack/react-form'
 import { replacePerson } from './api/generated/person-api'
 import { PersonUpdate as PersonUpdateSchema } from './api/generated/models/personUpdate.zod'
-import type { PersonFormValues } from './person-form-data'
+import { toPersonUpdate, type PersonFormValues } from './person-form-data'
 import { validatePersonForm } from './person-form-validation'
 
 const initialPerson: PersonFormValues = {
@@ -22,13 +22,13 @@ const initialPerson: PersonFormValues = {
   },
   emergencyContacts: {
     status: 'provided',
-    primaryEmergencyContact: {
+    contacts: [{
       name: 'Charles Babbage',
       relationship: 'Friend',
       phoneNumber: '+442079460001',
       email: 'charles@example.com',
-    },
-    alternativeEmergencyContacts: [],
+      isPrimary: true,
+    }],
   },
 }
 
@@ -43,7 +43,7 @@ export const usePersonForm = (setResult: (result: string) => void) =>
       onDynamic: validatePersonForm,
     },
     onSubmit: async ({ value }) => {
-      const person = PersonUpdateSchema.parse(value)
+      const person = PersonUpdateSchema.parse(toPersonUpdate(value))
       const response = await replacePerson('ada', person)
       if (response.status === 200) {
         setResult(`Saved ${response.data.personalInformation.maritalStatus} person.`)

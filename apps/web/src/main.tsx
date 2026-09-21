@@ -61,11 +61,10 @@ const createEmptyEmergencyContact = (): EmergencyContactForm => ({
   relationship: '',
   phoneNumber: '',
   email: '',
+  isPrimary: false,
 })
 
-type EmergencyContactPath =
-  | 'emergencyContacts.primaryEmergencyContact'
-  | `emergencyContacts.alternativeEmergencyContacts[${number}]`
+type EmergencyContactPath = `emergencyContacts.contacts[${number}]`
 
 const EmergencyContactsFields = ({ form }: { form: PersonForm }) => (
   <form.Subscribe selector={(state) => state.values.emergencyContacts}>
@@ -93,38 +92,25 @@ const EmergencyContactsFields = ({ form }: { form: PersonForm }) => (
               />
               I prefer not to share emergency contacts
             </label>
-        <EmergencyContactCard
-          form={form}
-          title="Primary emergency contact"
-          path="emergencyContacts.primaryEmergencyContact"
-          isPrimary
-          canRemove={false}
-          onMakePrimary={() => undefined}
-          onRemove={() => undefined}
-        />
-        {emergencyContacts.alternativeEmergencyContacts.map((contact, index) => (
+        {emergencyContacts.contacts.map((contact, index) => (
           <EmergencyContactCard
             key={index}
             form={form}
-            title={`Emergency contact ${index + 2}`}
-            path={`emergencyContacts.alternativeEmergencyContacts[${index}]`}
-            isPrimary={false}
-            canRemove
+            title={`Emergency contact ${index + 1}`}
+            path={`emergencyContacts.contacts[${index}]`}
+            isPrimary={contact.isPrimary}
+            canRemove={index > 0}
             onMakePrimary={() =>
-              form.setFieldValue('emergencyContacts', {
-                status: 'provided',
-                primaryEmergencyContact: contact,
-                alternativeEmergencyContacts: [
-                  emergencyContacts.primaryEmergencyContact,
-                  ...emergencyContacts.alternativeEmergencyContacts.filter(
-                    (_, currentIndex) => currentIndex !== index,
-                  ),
-                ],
-              })
+              form.setFieldValue('emergencyContacts.contacts',
+                emergencyContacts.contacts.map((currentContact, currentIndex) => ({
+                  ...currentContact,
+                  isPrimary: currentIndex === index,
+                })),
+              )
             }
             onRemove={() =>
-              form.setFieldValue('emergencyContacts.alternativeEmergencyContacts',
-                emergencyContacts.alternativeEmergencyContacts.filter(
+              form.setFieldValue('emergencyContacts.contacts',
+                emergencyContacts.contacts.filter(
                   (_, currentIndex) => currentIndex !== index,
                 ),
               )
@@ -134,10 +120,10 @@ const EmergencyContactsFields = ({ form }: { form: PersonForm }) => (
         <button
           type="button"
           className="add-contact-button"
-          disabled={emergencyContacts.alternativeEmergencyContacts.length === 2}
+          disabled={emergencyContacts.contacts.length === 3}
           onClick={() =>
-            form.setFieldValue('emergencyContacts.alternativeEmergencyContacts', [
-              ...emergencyContacts.alternativeEmergencyContacts,
+            form.setFieldValue('emergencyContacts.contacts', [
+              ...emergencyContacts.contacts,
               createEmptyEmergencyContact(),
             ])
           }

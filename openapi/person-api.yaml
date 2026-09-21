@@ -6,15 +6,27 @@ servers:
   - url: http://localhost:3000
 paths:
   /people/{personId}:
+    parameters:
+      - name: personId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: getPerson
+      summary: Get a person
+      responses:
+        '200':
+          description: The stored person
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonUpdate'
+        '404':
+          description: No person exists for this identifier
     put:
       operationId: replacePerson
       summary: Replace a person
-      parameters:
-        - name: personId
-          in: path
-          required: true
-          schema:
-            type: string
       requestBody:
         required: true
         content:
@@ -32,7 +44,7 @@ paths:
           description: The request body does not match the marital-status rules
 components:
   schemas:
-    PersonBase:
+    Identity:
       type: object
       properties:
         firstName:
@@ -80,9 +92,9 @@ components:
               - spouseFirstName
           - required:
               - spouseLastName
-    PersonUpdate:
+    PersonalInformation:
       allOf:
-        - $ref: '#/components/schemas/PersonBase'
+        - $ref: '#/components/schemas/Identity'
         - oneOf:
             - $ref: '#/components/schemas/MarriedPerson'
             - $ref: '#/components/schemas/UnmarriedPerson'
@@ -93,3 +105,90 @@ components:
           single: '#/components/schemas/UnmarriedPerson'
           divorced: '#/components/schemas/UnmarriedPerson'
           widowed: '#/components/schemas/UnmarriedPerson'
+    Address:
+      type: object
+      properties:
+        addressFirstLine:
+          type: string
+          minLength: 1
+        addressSecondLine:
+          type: string
+        postCode:
+          type: string
+          minLength: 1
+        city:
+          type: string
+          minLength: 1
+        country:
+          type: string
+          minLength: 1
+      required:
+        - addressFirstLine
+        - addressSecondLine
+        - postCode
+        - city
+        - country
+    EmergencyContact:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        relationship:
+          type: string
+        phoneNumber:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          pattern: '^$|^[^\s@]+@[^\s@]+\.[^\s@]+$'
+      required:
+        - name
+        - relationship
+        - phoneNumber
+        - email
+    EmergencyContactsDeclined:
+      type: object
+      properties:
+        status:
+          const: declined
+      required:
+        - status
+    EmergencyContactsProvided:
+      type: object
+      properties:
+        status:
+          const: provided
+        primaryEmergencyContact:
+          $ref: '#/components/schemas/EmergencyContact'
+        alternativeEmergencyContacts:
+          type: array
+          maxItems: 2
+          items:
+            $ref: '#/components/schemas/EmergencyContact'
+      required:
+        - status
+        - primaryEmergencyContact
+        - alternativeEmergencyContacts
+    EmergencyContacts:
+      oneOf:
+        - $ref: '#/components/schemas/EmergencyContactsDeclined'
+        - $ref: '#/components/schemas/EmergencyContactsProvided'
+      discriminator:
+        propertyName: status
+        mapping:
+          declined: '#/components/schemas/EmergencyContactsDeclined'
+          provided: '#/components/schemas/EmergencyContactsProvided'
+    PersonUpdate:
+      type: object
+      properties:
+        personalInformation:
+          $ref: '#/components/schemas/PersonalInformation'
+        address:
+          $ref: '#/components/schemas/Address'
+        emergencyContacts:
+          $ref: '#/components/schemas/EmergencyContacts'
+      required:
+        - personalInformation
+        - address
+        - emergencyContacts

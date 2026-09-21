@@ -9,23 +9,11 @@ import { match } from 'ts-pattern'
 import { parse } from 'yaml'
 import { createInMemoryEmailGateway, sendSpouseInvitation } from './email.js'
 import type { EmailGateway } from './email.js'
+import { createInMemoryPeopleRepository } from './people-repository.js'
+import type { PeopleRepository } from './people-repository.js'
+import type { Person } from './person.js'
 
-type PersonBase = {
-  firstName: string
-  lastName: string
-}
-
-export type Person = PersonBase & (
-  | {
-      maritalStatus: 'married'
-      spouseFirstName: string
-      spouseLastName: string
-      spouseEmail: string
-    }
-  | {
-      maritalStatus: 'single' | 'divorced' | 'widowed'
-    }
-)
+export type { Person } from './person.js'
 
 const currentDirectory = dirname(fileURLToPath(import.meta.url))
 const openApiPath = resolve(currentDirectory, '../../../openapi/person-api.yaml')
@@ -38,21 +26,24 @@ const validator = new Ajv2020({ allErrors: true, strict: false }).compile({
   components: openApiDocument.components,
 })
 
-export const buildApp = (emailGateway: EmailGateway = createInMemoryEmailGateway()) => {
+const hasDistinctEmergencyPhoneNumbers = (person: Person): boolean => {
+  if (person.emergencyContacts.status === 'declined') {
+    return true
+  }
+
+  const phoneNumbers = [
+    person.emergencyContacts.primaryEmergencyContact,
+    ...person.emergencyContacts.alternativeEmergencyContacts,
+  ].map(contact => contact.phoneNumber.trim())
+
+  return new Set(phoneNumbers).size === phoneNumbers.length
+}
+
+export const buildApp = (
+  emailGateway: EmailGateway = createInMemoryEmailGateway(),
+  peopleRepository: PeopleRepository = createInMemoryPeopleRepository(),
+) => {
   const app = Fastify()
-  const people = new Map<string, Person>([
-    [
-      'ada',
-      {
-        firstName: 'Ada',
-        lastName: 'Lovelace',
-        maritalStatus: 'married',
-        spouseFirstName: 'William',
-        spouseLastName: 'King-Noel',
-        spouseEmail: 'william@example.com',
-      },
-    ],
-  ])
 
   app.register(swagger, {
     mode: 'static',
@@ -66,16 +57,27 @@ export const buildApp = (emailGateway: EmailGateway = createInMemoryEmailGateway
 
   app.get('/openapi.json', () => openApiDocument)
 
+  app.get<{ Params: { personId: string } }>('/people/:personId', (request, reply) => {
+    if (!peopleRepository.has(request.params.personId)) {
+      return reply.status(404).send()
+    }
+
+    return reply.status(200).send(peopleRepository.get(request.params.personId))
+  })
+
   app.put<{ Params: { personId: string }; Body: unknown }>(
     '/people/:personId',
     async (request, reply) => {
-      if (!validator(request.body)) {
+      if (
+        !validator(request.body) ||
+        !hasDistinctEmergencyPhoneNumbers(request.body as Person)
+      ) {
         return reply.status(400).send({ errors: validator.errors })
       }
 
       const person = request.body as Person
-      people.set(request.params.personId, person)
-      match(person)
+      peopleRepository.replace(request.params.personId, person)
+      match(person.personalInformation)
         .with({ maritalStatus: 'married' }, (person) =>
           sendSpouseInvitation(
             {
@@ -87,7 +89,7 @@ export const buildApp = (emailGateway: EmailGateway = createInMemoryEmailGateway
           ),
         )
         .otherwise(() => undefined)
-      return reply.status(200).send(person)
+      return reply.status(200).send(peopleRepository.get(request.params.personId))
     },
   )
 

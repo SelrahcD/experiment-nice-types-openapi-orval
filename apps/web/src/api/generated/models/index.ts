@@ -5,8 +5,14 @@
  * OpenAPI spec version: 1.0.0
  */
 
+export * from './address.zod';
+export * from './emergencyContact.zod';
+export * from './emergencyContacts.zod';
+export * from './emergencyContactsDeclined.zod';
+export * from './emergencyContactsProvided.zod';
+export * from './identity.zod';
 export * from './marriedPerson.zod';
-export * from './personBase.zod';
 export * from './personUpdate.zod';
+export * from './personalInformation.zod';
 export * from './replacePersonBody.zod';
 export * from './unmarriedPerson.zod';

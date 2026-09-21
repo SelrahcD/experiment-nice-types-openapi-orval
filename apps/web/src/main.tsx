@@ -1,18 +1,22 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { match } from 'ts-pattern'
+import './app.css'
 import type { PersonUpdate } from './api/generated/models/personUpdate.zod'
+import { getPerson } from './api/generated/person-api'
 import { formatErrors } from './form-errors'
 import { usePersonForm } from './person-form'
 import type { PersonForm } from './person-form'
+import { fromPersonUpdate, type EmergencyContactForm, type PersonFormValues } from './person-form-data'
 
 const unmarriedStatuses = ['single', 'divorced', 'widowed'] as const
 
 const SpouseFields = ({ form }: { form: PersonForm }) => (
-  <>
-    <form.Field name="spouseFirstName">
+  <fieldset className="spouse-fields">
+    <legend>Spouse details</legend>
+    <form.Field name="personalInformation.spouseFirstName">
       {(field) => (
-        <label>
+        <label className="field">
           Spouse first name
           <input
             value={field.state.value}
@@ -23,9 +27,9 @@ const SpouseFields = ({ form }: { form: PersonForm }) => (
         </label>
       )}
     </form.Field>
-    <form.Field name="spouseLastName">
+    <form.Field name="personalInformation.spouseLastName">
       {(field) => (
-        <label>
+        <label className="field">
           Spouse last name
           <input
             value={field.state.value}
@@ -36,9 +40,9 @@ const SpouseFields = ({ form }: { form: PersonForm }) => (
         </label>
       )}
     </form.Field>
-    <form.Field name="spouseEmail">
+    <form.Field name="personalInformation.spouseEmail">
       {(field) => (
-        <label>
+        <label className="field">
           Spouse email
           <input
             type="email"
@@ -50,26 +54,176 @@ const SpouseFields = ({ form }: { form: PersonForm }) => (
         </label>
       )}
     </form.Field>
-  </>
+  </fieldset>
 )
 
-const App = () => {
+const createEmptyEmergencyContact = (): EmergencyContactForm => ({
+  name: '',
+  relationship: '',
+  phoneNumber: '',
+  email: '',
+  isPrimary: false,
+})
+
+type EmergencyContactPath = `emergencyContacts.contacts[${number}]`
+
+const EmergencyContactsFields = ({ form }: { form: PersonForm }) => (
+  <form.Subscribe selector={(state) => state.values.emergencyContacts}>
+    {(emergencyContacts) => (
+      <fieldset>
+        <legend>Emergency contacts</legend>
+        {emergencyContacts.status === 'declined' ? (
+          <label className="primary-toggle">
+            <input
+              type="checkbox"
+              checked
+              onChange={() => form.setFieldValue('emergencyContacts.status', 'provided')}
+            />
+            I prefer not to share emergency contacts
+          </label>
+        ) : (
+          <>
+            <label className="primary-toggle">
+              <input
+                type="checkbox"
+                checked={false}
+                onChange={() =>
+                  form.setFieldValue('emergencyContacts.status', 'declined')
+                }
+              />
+              I prefer not to share emergency contacts
+            </label>
+        {emergencyContacts.contacts.map((contact, index) => (
+          <EmergencyContactCard
+            key={index}
+            form={form}
+            title={`Emergency contact ${index + 1}`}
+            path={`emergencyContacts.contacts[${index}]`}
+            isPrimary={contact.isPrimary}
+            canRemove={index > 0}
+            onMakePrimary={() =>
+              form.setFieldValue('emergencyContacts.contacts',
+                emergencyContacts.contacts.map((currentContact, currentIndex) => ({
+                  ...currentContact,
+                  isPrimary: currentIndex === index,
+                })),
+              )
+            }
+            onRemove={() =>
+              form.setFieldValue('emergencyContacts.contacts',
+                emergencyContacts.contacts.filter(
+                  (_, currentIndex) => currentIndex !== index,
+                ),
+              )
+            }
+          />
+        ))}
+        <button
+          type="button"
+          className="add-contact-button"
+          disabled={emergencyContacts.contacts.length === 3}
+          onClick={() =>
+            form.setFieldValue('emergencyContacts.contacts', [
+              ...emergencyContacts.contacts,
+              createEmptyEmergencyContact(),
+            ])
+          }
+        >
+          Add emergency contact
+        </button>
+          </>
+        )}
+      </fieldset>
+    )}
+  </form.Subscribe>
+)
+
+const EmergencyContactCard = ({
+  form,
+  title,
+  path,
+  isPrimary,
+  canRemove,
+  onMakePrimary,
+  onRemove,
+}: {
+  form: PersonForm
+  title: string
+  path: EmergencyContactPath
+  isPrimary: boolean
+  canRemove: boolean
+  onMakePrimary: () => void
+  onRemove: () => void
+}) => (
+  <fieldset className="spouse-fields">
+    <legend>{title}</legend>
+    <form.Field name={`${path}.name` as const}>
+      {(field) => (
+        <label className="field">
+          Name
+          <input value={field.state.value} onBlur={field.handleBlur} onChange={(event) => field.handleChange(event.target.value)} />
+          {field.state.meta.errors.length > 0 && <small>{formatErrors(field.state.meta.errors)}</small>}
+        </label>
+      )}
+    </form.Field>
+    <form.Field name={`${path}.relationship` as const}>
+      {(field) => (
+        <label className="field">
+          Relationship
+          <input value={field.state.value} onBlur={field.handleBlur} onChange={(event) => field.handleChange(event.target.value)} />
+        </label>
+      )}
+    </form.Field>
+    <form.Field name={`${path}.phoneNumber` as const}>
+      {(field) => (
+        <label className="field">
+          Phone number
+          <input type="tel" value={field.state.value} onBlur={field.handleBlur} onChange={(event) => field.handleChange(event.target.value)} />
+          {field.state.meta.errors.length > 0 && <small>{formatErrors(field.state.meta.errors)}</small>}
+        </label>
+      )}
+    </form.Field>
+    <form.Field name={`${path}.email` as const}>
+      {(field) => (
+        <label className="field">
+          Email
+          <input type="email" value={field.state.value} onBlur={field.handleBlur} onChange={(event) => field.handleChange(event.target.value)} />
+          {field.state.meta.errors.length > 0 && <small>{formatErrors(field.state.meta.errors)}</small>}
+        </label>
+      )}
+    </form.Field>
+    <label className="primary-toggle">
+      <input type="checkbox" checked={isPrimary} disabled={isPrimary} onChange={onMakePrimary} />
+      Set as primary emergency contact
+    </label>
+    {canRemove && <button type="button" className="remove-contact-button" onClick={onRemove}>Remove contact</button>}
+  </fieldset>
+)
+
+const PersonEditor = ({ person }: { person: PersonFormValues }) => {
   const [result, setResult] = useState('')
-  const form = usePersonForm(setResult)
+  const form = usePersonForm(person, setResult)
 
   return (
-    <main>
-      <h1>OpenAPI discriminated union POC</h1>
-      <form
-        onSubmit={(event) => {
-          event.preventDefault()
-          event.stopPropagation()
-          void form.handleSubmit()
-        }}
-      >
-        <form.Field name="firstName">
+    <main className="page">
+      <section className="form-card">
+        <h1>OpenAPI discriminated union POC</h1>
+        <p className="form-introduction">
+          Update personal information and address details.
+        </p>
+        <form
+          className="person-form"
+          onSubmit={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            void form.handleSubmit()
+          }}
+        >
+        <fieldset>
+          <legend>Personal information</legend>
+          <form.Field name="personalInformation.firstName">
           {(field) => (
-            <label>
+            <label className="field">
               First name
               <input
                 value={field.state.value}
@@ -79,10 +233,10 @@ const App = () => {
               {field.state.meta.errors.length > 0 && <small>{formatErrors(field.state.meta.errors)}</small>}
             </label>
           )}
-        </form.Field>
-        <form.Field name="lastName">
+          </form.Field>
+          <form.Field name="personalInformation.lastName">
           {(field) => (
-            <label>
+            <label className="field">
               Last name
               <input
                 value={field.state.value}
@@ -92,15 +246,19 @@ const App = () => {
               {field.state.meta.errors.length > 0 && <small>{formatErrors(field.state.meta.errors)}</small>}
             </label>
           )}
-        </form.Field>
-        <form.Field name="maritalStatus">
+          </form.Field>
+          <form.Field name="personalInformation.maritalStatus">
           {(field) => (
-            <label>
+            <label className="field">
               Marital status
               <select
                 value={field.state.value}
                 onBlur={field.handleBlur}
-                onChange={(event) => field.handleChange(event.target.value as PersonUpdate['maritalStatus'])}
+                onChange={(event) =>
+                  field.handleChange(
+                    event.target.value as PersonUpdate['personalInformation']['maritalStatus'],
+                  )
+                }
               >
                 <option value="married">Married</option>
                 {unmarriedStatuses.map((status) => (
@@ -112,27 +270,125 @@ const App = () => {
               {field.state.meta.errors.length > 0 && <small>{formatErrors(field.state.meta.errors)}</small>}
             </label>
           )}
-        </form.Field>
-        <form.Subscribe selector={(state) => state.values.maritalStatus}>
+          </form.Field>
+          <form.Subscribe
+            selector={(state) => state.values.personalInformation.maritalStatus}
+          >
           {(maritalStatus) =>
             match(maritalStatus)
               .with('married', () => <SpouseFields form={form} />)
               .with('single', 'divorced', 'widowed', () => null)
               .exhaustive()
           }
-        </form.Subscribe>
+          </form.Subscribe>
+        </fieldset>
+        <fieldset>
+          <legend>Address</legend>
+          <form.Field name="address.addressFirstLine">
+            {(field) => (
+              <label className="field">
+                Address line 1
+                <input
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                />
+                {field.state.meta.errors.length > 0 && <small>{formatErrors(field.state.meta.errors)}</small>}
+              </label>
+            )}
+          </form.Field>
+          <form.Field name="address.addressSecondLine">
+            {(field) => (
+              <label className="field">
+                Address line 2
+                <input
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                />
+              </label>
+            )}
+          </form.Field>
+          <form.Field name="address.postCode">
+            {(field) => (
+              <label className="field">
+                Postcode
+                <input
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                />
+                {field.state.meta.errors.length > 0 && <small>{formatErrors(field.state.meta.errors)}</small>}
+              </label>
+            )}
+          </form.Field>
+          <form.Field name="address.city">
+            {(field) => (
+              <label className="field">
+                City
+                <input
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                />
+                {field.state.meta.errors.length > 0 && <small>{formatErrors(field.state.meta.errors)}</small>}
+              </label>
+            )}
+          </form.Field>
+          <form.Field name="address.country">
+            {(field) => (
+              <label className="field">
+                Country
+                <input
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                />
+                {field.state.meta.errors.length > 0 && <small>{formatErrors(field.state.meta.errors)}</small>}
+              </label>
+            )}
+          </form.Field>
+        </fieldset>
+        <EmergencyContactsFields form={form} />
         <form.Subscribe selector={(state) => state.isSubmitting}>
           {(isSubmitting) => (
-            <button type="submit" disabled={isSubmitting}>
+            <button className="submit-button" type="submit" disabled={isSubmitting}>
               Save
             </button>
           )}
         </form.Subscribe>
       </form>
 
-      <output>{result}</output>
+        <output className="form-result">{result}</output>
+      </section>
     </main>
   )
+}
+
+type PersonLoadState =
+  | { status: 'loading' }
+  | { status: 'loaded'; person: PersonFormValues }
+  | { status: 'error' }
+
+const App = () => {
+  const [personLoadState, setPersonLoadState] = useState<PersonLoadState>({ status: 'loading' })
+
+  useEffect(() => {
+    void getPerson('ada').then((response) => {
+      if (response.status === 200) {
+        setPersonLoadState({ status: 'loaded', person: fromPersonUpdate(response.data) })
+        return
+      }
+
+      setPersonLoadState({ status: 'error' })
+    })
+  }, [])
+
+  return match(personLoadState)
+    .with({ status: 'loading' }, () => <main className="page">Loading person…</main>)
+    .with({ status: 'loaded' }, ({ person }) => <PersonEditor person={person} />)
+    .with({ status: 'error' }, () => <main className="page">Unable to load person.</main>)
+    .exhaustive()
 }
 
 createRoot(document.getElementById('root')!).render(<App />)

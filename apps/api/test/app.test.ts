@@ -1,8 +1,51 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { buildApp } from '../src/app.js'
 import { createInMemoryEmailGateway } from '../src/email.js'
+import { createInMemoryPeopleRepository } from '../src/people-repository.js'
 
 let application = buildApp()
+
+const address = {
+  addressFirstLine: '12 St James Square',
+  addressSecondLine: '',
+  postCode: 'SW1Y 4LB',
+  city: 'London',
+  country: 'GB',
+}
+
+const emergencyContacts = {
+  status: 'provided' as const,
+  primaryEmergencyContact: {
+    name: 'Charles Babbage',
+    relationship: 'Friend',
+    phoneNumber: '+442079460001',
+    email: 'charles@example.com',
+  },
+  alternativeEmergencyContacts: [],
+}
+
+const marriedPerson = {
+  personalInformation: {
+    firstName: 'Ada',
+    lastName: 'Lovelace',
+    maritalStatus: 'married',
+    spouseFirstName: 'William',
+    spouseLastName: 'King-Noel',
+    spouseEmail: 'william@example.com',
+  },
+  address,
+  emergencyContacts,
+}
+
+const unmarriedPerson = {
+  personalInformation: {
+    firstName: 'Ada',
+    lastName: 'Lovelace',
+    maritalStatus: 'single',
+  },
+  address,
+  emergencyContacts,
+}
 
 beforeEach(() => {
   application = buildApp()
@@ -17,18 +60,54 @@ describe('PUT /people/:personId', () => {
     const response = await application.inject({
       method: 'PUT',
       url: '/people/ada',
-      payload: {
-        firstName: 'Ada',
-        lastName: 'Lovelace',
-        maritalStatus: 'married',
-        spouseFirstName: 'William',
-        spouseLastName: 'King-Noel',
-        spouseEmail: 'william@example.com',
-      },
+      payload: marriedPerson,
     })
 
     expect(response.statusCode).toBe(200)
-    expect(response.json()).toMatchObject({ spouseFirstName: 'William' })
+    expect(response.json()).toMatchObject({
+      personalInformation: { spouseFirstName: 'William' },
+      address,
+    })
+  })
+
+  it('stores the replacement in the in-memory database', async () => {
+    const peopleRepository = createInMemoryPeopleRepository()
+    application = buildApp(createInMemoryEmailGateway(), peopleRepository)
+    const replacement = {
+      ...unmarriedPerson,
+      address: { ...address, city: 'Paris' },
+    }
+
+    await application.inject({
+      method: 'PUT',
+      url: '/people/ada',
+      payload: replacement,
+    })
+
+    expect(peopleRepository.get('ada')).toEqual(replacement)
+  })
+
+  it('returns the replacement through GET after a PUT', async () => {
+    const replacement = {
+      ...unmarriedPerson,
+      address: { ...address, city: 'Paris' },
+    }
+
+    await application.inject({
+      method: 'PUT',
+      url: '/people/ada',
+      payload: replacement,
+    })
+    const response = await application.inject({ method: 'GET', url: '/people/ada' })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual(replacement)
+  })
+
+  it('returns 404 when the person is not in the in-memory database', async () => {
+    const response = await application.inject({ method: 'GET', url: '/people/unknown' })
+
+    expect(response.statusCode).toBe(404)
   })
 
   it('sends an invitation email when a married person is saved', async () => {
@@ -38,14 +117,7 @@ describe('PUT /people/:personId', () => {
     await application.inject({
       method: 'PUT',
       url: '/people/ada',
-      payload: {
-        firstName: 'Ada',
-        lastName: 'Lovelace',
-        maritalStatus: 'married',
-        spouseFirstName: 'William',
-        spouseLastName: 'King-Noel',
-        spouseEmail: 'william@example.com',
-      },
+      payload: marriedPerson,
     })
 
     expect(emailGateway.sentEmails).toEqual([
@@ -64,7 +136,7 @@ describe('PUT /people/:personId', () => {
     await application.inject({
       method: 'PUT',
       url: '/people/ada',
-      payload: { firstName: 'Ada', lastName: 'Lovelace', maritalStatus: 'single' },
+      payload: unmarriedPerson,
     })
 
     expect(emailGateway.sentEmails).toEqual([])
@@ -74,7 +146,15 @@ describe('PUT /people/:personId', () => {
     const response = await application.inject({
       method: 'PUT',
       url: '/people/ada',
-      payload: { firstName: 'Ada', lastName: 'Lovelace', maritalStatus: 'married' },
+      payload: {
+        personalInformation: {
+          firstName: 'Ada',
+          lastName: 'Lovelace',
+          maritalStatus: 'married',
+        },
+        address,
+        emergencyContacts,
+      },
     })
 
     expect(response.statusCode).toBe(400)
@@ -85,12 +165,9 @@ describe('PUT /people/:personId', () => {
       method: 'PUT',
       url: '/people/ada',
       payload: {
-        firstName: 'Ada',
-        lastName: 'Lovelace',
-        maritalStatus: 'married',
-        spouseFirstName: 'William',
-        spouseLastName: 'King-Noel',
-        spouseEmail: 'not-an-email',
+        personalInformation: { ...marriedPerson.personalInformation, spouseEmail: 'not-an-email' },
+        address,
+        emergencyContacts,
       },
     })
 
@@ -101,11 +178,29 @@ describe('PUT /people/:personId', () => {
     const response = await application.inject({
       method: 'PUT',
       url: '/people/ada',
-      payload: { firstName: 'Ada', lastName: 'Lovelace', maritalStatus: 'single' },
+      payload: unmarriedPerson,
     })
 
     expect(response.statusCode).toBe(200)
-    expect(response.json()).toMatchObject({ maritalStatus: 'single' })
+    expect(response.json()).toMatchObject({
+      personalInformation: { maritalStatus: 'single' },
+    })
+  })
+
+  it('saves a person who declines to share emergency contacts', async () => {
+    const response = await application.inject({
+      method: 'PUT',
+      url: '/people/ada',
+      payload: {
+        ...unmarriedPerson,
+        emergencyContacts: { status: 'declined' },
+      },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toMatchObject({
+      emergencyContacts: { status: 'declined' },
+    })
   })
 
   it('rejects spouse names for an unmarried person', async () => {
@@ -113,10 +208,90 @@ describe('PUT /people/:personId', () => {
       method: 'PUT',
       url: '/people/ada',
       payload: {
-        firstName: 'Ada',
-        lastName: 'Lovelace',
-        maritalStatus: 'single',
-        spouseFirstName: 'William',
+        personalInformation: { ...unmarriedPerson.personalInformation, spouseFirstName: 'William' },
+        address,
+        emergencyContacts,
+      },
+    })
+
+    expect(response.statusCode).toBe(400)
+  })
+
+  it('rejects emergency contacts without a primary contact', async () => {
+    const response = await application.inject({
+      method: 'PUT',
+      url: '/people/ada',
+      payload: {
+        ...unmarriedPerson,
+        emergencyContacts: {
+          status: 'provided',
+          alternativeEmergencyContacts: [],
+        },
+      },
+    })
+
+    expect(response.statusCode).toBe(400)
+  })
+
+  it('rejects a fourth emergency contact', async () => {
+    const response = await application.inject({
+      method: 'PUT',
+      url: '/people/ada',
+      payload: {
+        ...unmarriedPerson,
+        emergencyContacts: {
+          status: 'provided',
+          primaryEmergencyContact: emergencyContacts.primaryEmergencyContact,
+          alternativeEmergencyContacts: [
+            { name: 'Mary Somerville', relationship: 'Friend', phoneNumber: '+442079460002', email: '' },
+            { name: 'George Boole', relationship: 'Friend', phoneNumber: '+442079460003', email: '' },
+            { name: 'Mary Anning', relationship: 'Friend', phoneNumber: '+442079460004', email: '' },
+          ],
+        },
+      },
+    })
+
+    expect(response.statusCode).toBe(400)
+  })
+
+  it('rejects an emergency contact with an invalid email address', async () => {
+    const response = await application.inject({
+      method: 'PUT',
+      url: '/people/ada',
+      payload: {
+        ...unmarriedPerson,
+        emergencyContacts: {
+          status: 'provided',
+          primaryEmergencyContact: {
+            ...emergencyContacts.primaryEmergencyContact,
+            email: 'not-an-email',
+          },
+          alternativeEmergencyContacts: [],
+        },
+      },
+    })
+
+    expect(response.statusCode).toBe(400)
+  })
+
+  it('rejects duplicate emergency contact phone numbers', async () => {
+    const response = await application.inject({
+      method: 'PUT',
+      url: '/people/ada',
+      payload: {
+        ...unmarriedPerson,
+        emergencyContacts: {
+          status: 'provided',
+          primaryEmergencyContact: emergencyContacts.primaryEmergencyContact,
+          alternativeEmergencyContacts: [
+            {
+              name: 'Mary Somerville',
+              relationship: 'Friend',
+              phoneNumber: '+442079460001',
+              email: '',
+            },
+          ],
+        },
       },
     })
 
